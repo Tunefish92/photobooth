@@ -58,21 +58,41 @@ def test_is_newer_handles_different_component_counts():
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict) -> None:
+    def __init__(self, payload) -> None:
         self._payload = payload
 
     def raise_for_status(self) -> None:
         pass
 
-    def json(self) -> dict:
+    def json(self):
         return self._payload
 
 
-def test_fetch_latest_version_returns_tag_name(monkeypatch):
+def test_fetch_latest_version_returns_the_newest_releases_tag_name(monkeypatch):
+    """Uses GET /releases (a list, newest first), not GET /releases/latest
+    -- see the note on fetch_latest_version() for why."""
     monkeypatch.setattr(
-        "httpx.get", lambda *a, **kw: _FakeResponse({"tag_name": "v9.9.9"})
+        "httpx.get", lambda *a, **kw: _FakeResponse([{"tag_name": "v9.9.9"}, {"tag_name": "v9.9.8"}])
     )
     assert updater.fetch_latest_version() == "v9.9.9"
+
+
+def test_fetch_latest_version_works_when_the_newest_release_is_a_prerelease(monkeypatch):
+    """The whole reason this hits /releases instead of /releases/latest:
+    GitHub's /releases/latest 404s when every release is a prerelease
+    (like this project's own v0.1.0 Beta) -- the list endpoint has no such
+    filter, so a prerelease-flagged entry must still be picked up."""
+    monkeypatch.setattr(
+        "httpx.get",
+        lambda *a, **kw: _FakeResponse([{"tag_name": "v0.1.0", "prerelease": True}]),
+    )
+    assert updater.fetch_latest_version() == "v0.1.0"
+
+
+def test_fetch_latest_version_raises_a_clear_error_with_no_releases(monkeypatch):
+    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse([]))
+    with pytest.raises(ValueError, match="no releases"):
+        updater.fetch_latest_version()
 
 
 def test_fetch_latest_version_propagates_http_errors(monkeypatch):

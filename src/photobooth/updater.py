@@ -22,7 +22,7 @@ import httpx
 
 from photobooth import __version__
 
-_LATEST_RELEASE_API = "https://api.github.com/repos/Tunefish92/photobooth/releases/latest"
+_RELEASES_API = "https://api.github.com/repos/Tunefish92/photobooth/releases"
 _REQUEST_TIMEOUT_S = 10.0
 _SUBPROCESS_TIMEOUT_S = 120.0
 
@@ -53,15 +53,27 @@ def is_newer(candidate: str, current: str) -> bool:
 
 def fetch_latest_version() -> str:
     """Blocking network call -- always run via run_in_background, never on
-    the UI thread."""
+    the UI thread.
+
+    Deliberately hits GET /releases (the full list, newest first) rather
+    than GET /releases/latest: that "latest" endpoint explicitly excludes
+    prereleases by GitHub's own definition ("the most recent non-prerelease,
+    non-draft release"), and 404s entirely if every release is a
+    prerelease -- which the project's own v0.1.0 (Beta) currently is. The
+    list endpoint has no such filter, so this just takes the newest entry
+    regardless of its prerelease flag.
+    """
     response = httpx.get(
-        _LATEST_RELEASE_API,
+        _RELEASES_API,
         timeout=_REQUEST_TIMEOUT_S,
         headers={"Accept": "application/vnd.github+json"},
+        params={"per_page": 1},
     )
     response.raise_for_status()
-    tag_name = response.json()["tag_name"]
-    return str(tag_name)
+    releases = response.json()
+    if not releases:
+        raise ValueError("Repository has no releases")
+    return str(releases[0]["tag_name"])
 
 
 def repo_root() -> Path:
