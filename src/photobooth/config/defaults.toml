@@ -1,0 +1,101 @@
+[app]
+# Fullscreen kiosk mode (set False for windowed dev mode)
+fullscreen = true
+width = 1280
+height = 800
+hide_cursor = true
+# "aurora-dark" or "aurora-light"
+theme = "aurora-dark"
+language = "en"
+
+[camera]
+# "auto", "gphoto2", "picamera2", "opencv", "dummy"
+backend = "auto"
+rotation = 0
+mirror_preview = true
+opencv_device_index = 0
+# Delay in seconds before each shot after the first one in a multi-shot
+# session (grid/gif/boomerang). The first shot always uses flow.countdown_time_s.
+inter_shot_delay_s = 1.0
+
+[gpio]
+enable = false
+exit_pin = 24
+trigger_pin = 23
+lamp_pin = 4
+chan_r_pin = 27
+chan_g_pin = 22
+chan_b_pin = 17
+
+[printer]
+enable = true
+# "cups" or "pdf" (debug fallback, no physical printer needed)
+backend = "cups"
+# CUPS queue name, e.g. as installed from the SELPHY CP1300 PPD
+cups_printer_name = "Canon_SELPHY_CP1300"
+confirmation = true
+paper_width_mm = 148
+paper_height_mm = 100
+
+[flow]
+show_preview = true
+greeter_time_s = 3
+countdown_time_s = 3
+display_time_s = 6
+postprocess_time_s = 60
+# "single", "grid", "gif", "boomerang"
+default_mode = "single"
+enabled_modes = ["single", "grid", "gif", "boomerang"]
+
+[layout]
+num_x = 2
+num_y = 2
+size_x = 3496
+size_y = 2362
+inner_dist_x = 20
+inner_dist_y = 20
+outer_dist_x = 40
+outer_dist_y = 40
+skip = []
+background = ""
+overlay = ""
+
+[effects]
+enabled_filters = ["none", "bw", "sepia", "vintage", "vivid"]
+default_filter = "none"
+chroma_key_enabled = false
+chroma_key_color = [0, 177, 64]
+chroma_key_background = ""
+
+[storage]
+basedir = "%Y-%m-%d"
+basename = "photobooth"
+keep_pictures = true
+data_dir = "data"
+
+[mailer]
+enable = false
+sender = "photobooth@example.com"
+recipient = "photobooth@example.com"
+subject = "Your photobooth picture"
+message = "Sent by the photobooth"
+server = "localhost"
+port = 587
+use_auth = true
+user = ""
+password = ""
+use_tls = true
+
+[webdav]
+enable = false
+url = "https://example.com/remote.php/webdav/Photobooth/"
+use_auth = true
+user = ""
+password = ""
+
+[usb_export]
+enable = true
+auto_detect = true
+
+[admin]
+pin = "1234"

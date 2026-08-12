@@ -1,0 +1,196 @@
+"""Typed, validated application settings.
+
+Defaults ship in `defaults.toml` next to this module. A user override file
+(see `photobooth.paths.user_config_file`) is deep-merged on top when present,
+and the Settings admin screen writes back to that same file.
+"""
+
+from __future__ import annotations
+
+from importlib import resources
+from pathlib import Path
+from typing import Any, Literal
+
+import tomlkit
+from pydantic import BaseModel, Field, field_validator
+
+CameraBackendName = Literal["auto", "gphoto2", "picamera2", "opencv", "dummy"]
+PrinterBackendName = Literal["cups", "pdf"]
+CaptureMode = Literal["single", "grid", "gif", "boomerang"]
+FilterName = Literal["none", "bw", "sepia", "vintage", "vivid"]
+ThemeName = Literal["aurora-dark", "aurora-light"]
+
+
+class AppConfig(BaseModel):
+    fullscreen: bool = True
+    width: int = 1280
+    height: int = 800
+    hide_cursor: bool = True
+    theme: ThemeName = "aurora-dark"
+    language: str = "en"
+
+
+class CameraConfig(BaseModel):
+    backend: CameraBackendName = "auto"
+    rotation: Literal[0, 90, 180, 270] = 0
+    mirror_preview: bool = True
+    opencv_device_index: int = 0
+    # Delay before each shot after the first one in a multi-shot session
+    # (grid/gif/boomerang); the first shot always uses flow.countdown_time_s.
+    inter_shot_delay_s: float = 1.0
+
+
+class GpioConfig(BaseModel):
+    enable: bool = False
+    exit_pin: int = 24
+    trigger_pin: int = 23
+    lamp_pin: int = 4
+    chan_r_pin: int = 27
+    chan_g_pin: int = 22
+    chan_b_pin: int = 17
+
+
+class PrinterConfig(BaseModel):
+    enable: bool = True
+    backend: PrinterBackendName = "cups"
+    cups_printer_name: str = "Canon_SELPHY_CP1300"
+    confirmation: bool = True
+    paper_width_mm: int = 148
+    paper_height_mm: int = 100
+
+
+class FlowConfig(BaseModel):
+    show_preview: bool = True
+    greeter_time_s: float = 3
+    countdown_time_s: float = 3
+    display_time_s: float = 6
+    postprocess_time_s: float = 60
+    default_mode: CaptureMode = "single"
+    enabled_modes: list[CaptureMode] = Field(
+        default_factory=lambda: ["single", "grid", "gif", "boomerang"]
+    )
+
+    @field_validator("enabled_modes")
+    @classmethod
+    def _at_least_one_mode_enabled(cls, value: list[CaptureMode]) -> list[CaptureMode]:
+        # The idle screen's mode picker has nothing to show (and GPIO/API
+        # start() calls have nothing valid to fall back to) if every mode is
+        # disabled -- the Settings UI also guards against unchecking the
+        # last one, but this is the authoritative check for any writer.
+        if not value:
+            raise ValueError("At least one photo mode must stay enabled")
+        return value
+
+
+class LayoutConfig(BaseModel):
+    num_x: int = 2
+    num_y: int = 2
+    size_x: int = 3496
+    size_y: int = 2362
+    inner_dist_x: int = 20
+    inner_dist_y: int = 20
+    outer_dist_x: int = 40
+    outer_dist_y: int = 40
+    skip: list[int] = Field(default_factory=list)
+    background: str = ""
+    overlay: str = ""
+
+
+class EffectsConfig(BaseModel):
+    enabled_filters: list[FilterName] = Field(
+        default_factory=lambda: ["none", "bw", "sepia", "vintage", "vivid"]
+    )
+    default_filter: FilterName = "none"
+    chroma_key_enabled: bool = False
+    chroma_key_color: tuple[int, int, int] = (0, 177, 64)
+    chroma_key_background: str = ""
+
+
+class StorageConfig(BaseModel):
+    basedir: str = "%Y-%m-%d"
+    basename: str = "photobooth"
+    keep_pictures: bool = True
+    data_dir: str = "data"
+
+
+class MailerConfig(BaseModel):
+    enable: bool = False
+    sender: str = "photobooth@example.com"
+    recipient: str = "photobooth@example.com"
+    subject: str = "Your photobooth picture"
+    message: str = "Sent by the photobooth"
+    server: str = "localhost"
+    port: int = 587
+    use_auth: bool = True
+    user: str = ""
+    password: str = ""
+    use_tls: bool = True
+
+
+class WebdavConfig(BaseModel):
+    enable: bool = False
+    url: str = "https://example.com/remote.php/webdav/Photobooth/"
+    use_auth: bool = True
+    user: str = ""
+    password: str = ""
+
+
+class UsbExportConfig(BaseModel):
+    enable: bool = True
+    auto_detect: bool = True
+
+
+class AdminConfig(BaseModel):
+    pin: str = "1234"
+
+
+class Settings(BaseModel):
+    app: AppConfig = Field(default_factory=AppConfig)
+    camera: CameraConfig = Field(default_factory=CameraConfig)
+    gpio: GpioConfig = Field(default_factory=GpioConfig)
+    printer: PrinterConfig = Field(default_factory=PrinterConfig)
+    flow: FlowConfig = Field(default_factory=FlowConfig)
+    layout: LayoutConfig = Field(default_factory=LayoutConfig)
+    effects: EffectsConfig = Field(default_factory=EffectsConfig)
+    storage: StorageConfig = Field(default_factory=StorageConfig)
+    mailer: MailerConfig = Field(default_factory=MailerConfig)
+    webdav: WebdavConfig = Field(default_factory=WebdavConfig)
+    usb_export: UsbExportConfig = Field(default_factory=UsbExportConfig)
+    admin: AdminConfig = Field(default_factory=AdminConfig)
+
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_defaults_dict() -> dict[str, Any]:
+    text = resources.files("photobooth.config").joinpath("defaults.toml").read_text("utf-8")
+    return tomlkit.parse(text).unwrap()
+
+
+def load_settings(user_config_path: Path | None = None) -> Settings:
+    data = _load_defaults_dict()
+
+    if user_config_path is not None and user_config_path.is_file():
+        override_text = user_config_path.read_text("utf-8")
+        override = tomlkit.parse(override_text).unwrap()
+        data = _deep_merge(data, override)
+
+    return Settings.model_validate(data)
+
+
+def save_settings(settings: Settings, user_config_path: Path) -> None:
+    user_config_path.parent.mkdir(parents=True, exist_ok=True)
+    doc = tomlkit.document()
+    for section, value in settings.model_dump(mode="json").items():
+        table = tomlkit.table()
+        for k, v in value.items():
+            table[k] = v
+        doc[section] = table
+    user_config_path.write_text(tomlkit.dumps(doc), encoding="utf-8")

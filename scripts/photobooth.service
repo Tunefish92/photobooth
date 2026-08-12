@@ -1,0 +1,22 @@
+[Unit]
+Description=Photobooth kiosk
+After=graphical.target network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/photobooth
+Environment=QT_QPA_PLATFORM=eglfs
+Environment=QT_QPA_EGLFS_ALWAYS_SET_MODE=1
+Environment=QT_QPA_EGLFS_HIDECURSOR=1
+ExecStart=/opt/photobooth/.venv/bin/photobooth
+Restart=always
+RestartSec=2
+
+# Needs access to the framebuffer/DRM, input devices, USB (gphoto2/printer/USB export)
+SupplementaryGroups=video render input plugdev lp lpadmin
+
+[Install]
+WantedBy=graphical.target

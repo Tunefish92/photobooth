@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.qmlls.ini
+
+# stray run logs/pid files from ad-hoc local test launches
+*.log
+run*_pid.txt
+
+# personal machine-local Claude Code settings (permissions etc.), not shared
+.claude/settings.local.json
+
+# editor/OS cruft
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
