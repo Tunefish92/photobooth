@@ -35,7 +35,8 @@ Item {
         { icon: "⎙", label: Translator.tr("settings.tab.printer") },
         { icon: "↗", label: Translator.tr("settings.tab.sharing") },
         { icon: "⏻", label: Translator.tr("settings.tab.gpio") },
-        { icon: "▦", label: Translator.tr("settings.tab.layout") }
+        { icon: "▦", label: Translator.tr("settings.tab.layout") },
+        { icon: "↻", label: Translator.tr("settings.tab.update") }
     ]
 
     readonly property var allModes: ["single", "grid", "gif", "boomerang"]
@@ -753,6 +754,77 @@ Item {
                                 text: root.settingsData.effects ? root.settingsData.effects.chroma_key_background : ""
                                 onEditingFinished: root.settingsData.effects.chroma_key_background = text
                             }
+                        }
+
+                        // -- Update ---------------------------------------------------
+                        ColumnLayout {
+                            width: stack.width
+                            spacing: Theme.spaceMd
+
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: root.wide ? 2 : 1
+                                columnSpacing: Theme.spaceLg
+                                rowSpacing: Theme.spaceMd
+
+                                Label { text: Translator.tr("settings.update.current_version"); color: Theme.textSecondary }
+                                Text {
+                                    text: App.currentVersion
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 22
+                                    color: Theme.textPrimary
+                                }
+
+                                Label { text: Translator.tr("settings.update.latest_version"); color: Theme.textSecondary }
+                                Text {
+                                    objectName: "updateLatestVersionText"
+                                    text: App.updateChecking
+                                        ? Translator.tr("settings.update.checking")
+                                        : (App.latestVersion || Translator.tr("settings.update.not_checked_yet"))
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 22
+                                    color: Theme.textPrimary
+                                }
+                            }
+
+                            Text {
+                                objectName: "updateStatusText"
+                                Layout.fillWidth: true
+                                text: {
+                                    if (App.updateApplying) return Translator.tr("settings.update.applying")
+                                    if (App.updateChecking) return Translator.tr("settings.update.checking")
+                                    if (App.updateError) return App.updateError
+                                    if (App.latestVersion === "") return ""
+                                    return App.updateAvailable
+                                        ? Translator.tr("settings.update.available")
+                                        : Translator.tr("settings.update.up_to_date")
+                                }
+                                color: App.updateAvailable ? Theme.accentA : Theme.textSecondary
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeBody
+                                wrapMode: Text.WordWrap
+                            }
+
+                            RowLayout {
+                                spacing: Theme.spaceMd
+
+                                PrimaryButton {
+                                    objectName: "checkForUpdatesButton"
+                                    text: Translator.tr("settings.update.check_button")
+                                    outlined: true
+                                    enabled: !App.updateChecking && !App.updateApplying
+                                    onClicked: App.checkForUpdates()
+                                }
+                                PrimaryButton {
+                                    objectName: "applyUpdateButton"
+                                    text: Translator.tr("settings.update.update_button")
+                                    visible: App.updateAvailable
+                                    enabled: !App.updateApplying
+                                    onClicked: App.applyUpdate()
+                                }
+                            }
+
+                            Item { Layout.fillHeight: true }
                         }
                     }
                 }

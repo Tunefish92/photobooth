@@ -15,10 +15,10 @@ import math
 from pathlib import Path
 
 from PIL import Image
-from PySide6.QtCore import Property, QObject, QThread, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QCoreApplication, QObject, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QImage
 
-from photobooth import paths
+from photobooth import __version__, paths, updater
 from photobooth.bridge.background import run_in_background
 from photobooth.bridge.camera_worker import CameraWorker
 from photobooth.bridge.preview_provider import PreviewImageProvider
@@ -79,6 +79,7 @@ class AppController(QObject):
     slideshowChanged = Signal()
     postprocessBusyChanged = Signal()
     configChanged = Signal()
+    updateInfoChanged = Signal()
     toast = Signal(str)
 
     _request_capture = Signal()
@@ -110,6 +111,12 @@ class AppController(QObject):
         self._postprocess_busy = False
         self._slideshow: list[str] = []
         self._idle_hue = 0.0
+
+        self._update_checking = False
+        self._update_applying = False
+        self._update_available = False
+        self._latest_version = ""
+        self._update_error = ""
 
         self._greeter_timer = self._make_timer(single_shot=True)
         self._greeter_timer.timeout.connect(self._sm_start_countdown)
@@ -144,6 +151,11 @@ class AppController(QObject):
         self._camera_thread.start()
 
         self._on_state_changed(self._sm.state)  # prime initial UI state
+
+        # Check for an update shortly after startup (delayed so it never
+        # competes with initial UI rendering/camera warmup) so the idle
+        # screen's badge can already be showing by the time a guest walks up.
+        QTimer.singleShot(3000, self.checkForUpdates)
 
     # -- setup helpers ---------------------------------------------------
     def _make_timer(self, *, interval_ms: int = 0, single_shot: bool = False) -> QTimer:
@@ -397,6 +409,60 @@ class AppController(QObject):
         key = "postprocess.usb_ok" if result is not None else "postprocess.usb_missing"
         self._on_action_done(key)
 
+    # -- update check/apply, invoked from QML --------------------------------
+    @Slot()
+    def checkForUpdates(self) -> None:
+        if self._update_checking or self._update_applying:
+            return
+        self._update_checking = True
+        self._update_error = ""
+        self.updateInfoChanged.emit()
+        run_in_background(
+            updater.fetch_latest_version,
+            on_success=self._on_update_check_done,
+            on_error=self._on_update_check_failed,
+        )
+
+    def _on_update_check_done(self, latest_version: str) -> None:
+        self._update_checking = False
+        self._latest_version = latest_version
+        self._update_available = updater.is_newer(latest_version, __version__)
+        self.updateInfoChanged.emit()
+
+    def _on_update_check_failed(self, message: str) -> None:
+        logger.warning("Update check failed: %s", message)
+        self._update_checking = False
+        self._update_error = message
+        self.updateInfoChanged.emit()
+
+    @Slot()
+    def applyUpdate(self) -> None:
+        if self._update_applying or not self._update_available or not self._latest_version:
+            return
+        self._update_applying = True
+        self._update_error = ""
+        self.updateInfoChanged.emit()
+        run_in_background(
+            updater.apply_update,
+            self._latest_version,
+            on_success=self._on_update_apply_done,
+            on_error=self._on_update_apply_failed,
+        )
+
+    def _on_update_apply_done(self, _result: None) -> None:
+        self.toast.emit(self.translator.tr("settings.update.restart_notice"))
+        # Give the toast a moment to actually render before the process
+        # exits; systemd's Restart=always (see photobooth.service) brings
+        # the app back up running the code we just checked out.
+        QTimer.singleShot(1500, QCoreApplication.quit)
+
+    def _on_update_apply_failed(self, message: str) -> None:
+        logger.warning("Update apply failed: %s", message)
+        self._update_applying = False
+        self._update_error = message
+        self.updateInfoChanged.emit()
+        self.toast.emit(self.translator.tr("settings.update.failed"))
+
     # -- flow control, invoked from QML ------------------------------------
     @Slot(str, str)
     def start(self, mode: str, filter_name: str = "none") -> None:
@@ -558,3 +624,27 @@ class AppController(QObject):
     @Property(bool, notify=configChanged)
     def printConfirmation(self) -> bool:
         return self._settings.printer.confirmation
+
+    @Property(str, constant=True)
+    def currentVersion(self) -> str:
+        return __version__
+
+    @Property(str, notify=updateInfoChanged)
+    def latestVersion(self) -> str:
+        return self._latest_version
+
+    @Property(bool, notify=updateInfoChanged)
+    def updateAvailable(self) -> bool:
+        return self._update_available
+
+    @Property(bool, notify=updateInfoChanged)
+    def updateChecking(self) -> bool:
+        return self._update_checking
+
+    @Property(bool, notify=updateInfoChanged)
+    def updateApplying(self) -> bool:
+        return self._update_applying
+
+    @Property(str, notify=updateInfoChanged)
+    def updateError(self) -> str:
+        return self._update_error

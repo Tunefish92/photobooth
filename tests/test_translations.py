@@ -81,3 +81,24 @@ def test_photo_modes_tab_and_all_modes_are_translated():
     ):
         assert key in en, f"missing translation key {key!r}"
         assert en[key].strip()
+
+
+def test_update_feature_is_fully_translated():
+    en = _load("en")
+    for key in (
+        "idle.update_badge",
+        "settings.tab.update",
+        "settings.update.current_version",
+        "settings.update.latest_version",
+        "settings.update.check_button",
+        "settings.update.update_button",
+        "settings.update.checking",
+        "settings.update.applying",
+        "settings.update.up_to_date",
+        "settings.update.available",
+        "settings.update.restart_notice",
+        "settings.update.failed",
+        "settings.update.not_checked_yet",
+    ):
+        assert key in en, f"missing translation key {key!r}"
+        assert en[key].strip()

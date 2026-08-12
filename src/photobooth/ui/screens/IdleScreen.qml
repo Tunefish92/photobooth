@@ -29,12 +29,39 @@ Item {
     }
 
     IconButton {
+        id: settingsGearButton
         objectName: "settingsGearButton"
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Theme.spaceLg
         vectorGear: true
         onClicked: pinPopup.visible = true
+    }
+
+    // Small, unobtrusive indicator that a newer release is available --
+    // AppController checks shortly after startup and whenever the Settings
+    // screen's Update tab is used; this just reflects App.updateAvailable.
+    Rectangle {
+        id: updateBadge
+        objectName: "updateAvailableBadge"
+        visible: App.updateAvailable
+        anchors.top: settingsGearButton.bottom
+        anchors.topMargin: Theme.spaceXs
+        anchors.horizontalCenter: settingsGearButton.horizontalCenter
+        radius: height / 2
+        height: badgeLabel.implicitHeight + Theme.spaceXs
+        width: badgeLabel.implicitWidth + Theme.spaceSm
+        color: Theme.accentA
+
+        Text {
+            id: badgeLabel
+            anchors.centerIn: parent
+            text: Translator.tr("idle.update_badge")
+            color: Theme.textOnAccent
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.sizeCaption
+            font.weight: Font.DemiBold
+        }
     }
 
     IconButton {

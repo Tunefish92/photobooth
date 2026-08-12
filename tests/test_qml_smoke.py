@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -57,6 +58,15 @@ def running_app(tmp_path_factory):
     os.environ["XDG_CONFIG_HOME"] = str(data_dir)
     os.environ["APPDATA"] = str(data_dir)
 
+    # AppController schedules an update check ~3s after construction (see
+    # its singleShot in __init__); stub the network call for the whole
+    # fixture lifetime so a slow-enough test run never fires a real request
+    # against the GitHub API.
+    updater_patcher = patch(
+        "photobooth.updater.fetch_latest_version", return_value="v0.0.0"
+    )
+    updater_patcher.start()
+
     settings = load_settings(None)
     app = QGuiApplication([])
     translator = Translator(settings.app.language)
@@ -79,6 +89,7 @@ def running_app(tmp_path_factory):
     yield app, engine, controller, warnings
 
     controller.shutdown()
+    updater_patcher.stop()
 
 
 @pytest.fixture(autouse=True)
@@ -372,6 +383,88 @@ def test_photo_modes_reflect_a_non_default_enabled_modes_list(running_app):
     data["flow"]["enabled_modes"] = ["single", "grid", "gif", "boomerang"]
     controller.saveSettingsJson(data)
     _pump(0.2)
+
+
+def test_update_tab_renders_with_expected_controls(running_app):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 7)  # Update is the last (8th) nav section
+    _pump(0.3)
+
+    assert root.findChild(QQuickItem, "updateLatestVersionText") is not None
+    assert root.findChild(QQuickItem, "updateStatusText") is not None
+    check_button = root.findChild(QQuickItem, "checkForUpdatesButton")
+    assert check_button is not None
+    assert check_button.property("enabled") is True
+    # no update available yet (nothing has checked) -- the apply button
+    # must stay hidden until there's actually something to apply
+    apply_button = root.findChild(QQuickItem, "applyUpdateButton")
+    assert apply_button is not None
+    assert apply_button.property("visible") is False
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_checking_for_updates_when_already_current_reports_up_to_date(running_app):
+    """The module-scoped fixture stubs fetch_latest_version() to "v0.0.0",
+    which is not newer than the running __version__ -- checking should land
+    on "up to date", not flag an update or show the idle badge."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    controller.checkForUpdates()
+    _pump(0.5)
+
+    assert controller.updateAvailable is False
+    badge = root.findChild(QQuickItem, "updateAvailableBadge")
+    assert badge is not None
+    assert badge.property("visible") is False
+
+
+def test_checking_for_updates_flags_a_newer_release_and_shows_the_badge(running_app):
+    """With a newer version stubbed in, checking must flip updateAvailable,
+    reveal the idle screen's badge, and reveal the Settings tab's apply
+    button -- all driven off the same App.updateAvailable property.
+    """
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    with patch("photobooth.updater.fetch_latest_version", return_value="v99.0.0"):
+        controller.checkForUpdates()
+        _pump(0.5)
+
+    try:
+        assert controller.updateAvailable is True
+        assert controller.latestVersion == "v99.0.0"
+
+        badge = root.findChild(QQuickItem, "updateAvailableBadge")
+        assert badge is not None
+        assert badge.property("visible") is True
+
+        admin_pin = controller.getSettingsJson()["admin"]["pin"]
+        assert controller.enterSettings(admin_pin) is True
+        _pump(1.0)
+        settings_root = root.findChild(QQuickItem, "settingsRoot")
+        settings_root.setProperty("currentIndex", 7)
+        _pump(0.3)
+
+        apply_button = root.findChild(QQuickItem, "applyUpdateButton")
+        assert apply_button.property("visible") is True
+
+        controller.exitSettings()
+        _pump(0.3)
+    finally:
+        # restore the "up to date" baseline so later tests in this module
+        # don't see a stale updateAvailable=True from this test.
+        controller.checkForUpdates()
+        _pump(0.5)
 
 
 def test_layout_margin_preview_renders_and_tracks_grid_size(running_app):
