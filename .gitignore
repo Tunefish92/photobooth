@@ -1,11 +1,27 @@
+# Byte-compiled / cache
 __pycache__/
 *.pyc
-.venv/
+*.pyo
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging / build
 *.egg-info/
+.eggs/
 dist/
 build/
+
+# Environments
+.venv/
+env/
+venv/
+.env
+
+# QML tooling
 .qmlls.ini
 
 # stray run logs/pid files from ad-hoc local test launches
