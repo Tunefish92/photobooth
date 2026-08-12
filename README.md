@@ -17,7 +17,7 @@ UI that runs full-screen straight on the framebuffer.
 | **General** ![General](docs/screenshots/settings_general.png) | **Photo Modes** ![Photo Modes](docs/screenshots/settings_modes.png) |
 | **Camera** ![Camera](docs/screenshots/settings_camera.png) | **Printer** ![Printer](docs/screenshots/settings_printer.png) |
 | **Sharing** ![Sharing](docs/screenshots/settings_sharing.png) | **GPIO** ![GPIO](docs/screenshots/settings_gpio.png) |
-| **Layout** ![Layout](docs/screenshots/settings_layout.png) | |
+| **Layout** ![Layout](docs/screenshots/settings_layout.png) | **Update** ![Update](docs/screenshots/settings_update.png) |
 
 </details>
 

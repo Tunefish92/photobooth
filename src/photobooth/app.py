@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl
-from PySide6.QtGui import QCursor, QGuiApplication
+from PySide6.QtGui import QCursor, QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 
 from photobooth import paths
@@ -65,6 +65,7 @@ def run() -> int:
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Photobooth")
     app.setOrganizationName("Photobooth")
+    app.setWindowIcon(QIcon(str(_UI_DIR / "icon.png")))
 
     translator = Translator(settings.app.language)
     controller = AppController(settings, translator)
