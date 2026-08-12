@@ -6,8 +6,21 @@ UI that runs full-screen straight on the framebuffer.
 
 <p align="center">
   <img src="docs/screenshots/idle.png" alt="Main idle screen" width="48%">
-  <img src="docs/screenshots/settings.png" alt="Settings screen" width="48%">
+  <img src="docs/screenshots/settings_general.png" alt="Settings - General" width="48%">
 </p>
+
+<details>
+<summary><b>Screenshots of every Settings tab</b></summary>
+<br>
+
+| | |
+|---|---|
+| **General** ![General](docs/screenshots/settings_general.png) | **Photo Modes** ![Photo Modes](docs/screenshots/settings_modes.png) |
+| **Camera** ![Camera](docs/screenshots/settings_camera.png) | **Printer** ![Printer](docs/screenshots/settings_printer.png) |
+| **Sharing** ![Sharing](docs/screenshots/settings_sharing.png) | **GPIO** ![GPIO](docs/screenshots/settings_gpio.png) |
+| **Layout** ![Layout](docs/screenshots/settings_layout.png) | |
+
+</details>
 
 ## Features
 

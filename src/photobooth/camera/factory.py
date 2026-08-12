@@ -45,7 +45,12 @@ def create_camera_backend(
             candidate = _build(backend, opencv_device_index)
             candidate.open()
             return candidate
-        except (ImportError, CameraUnavailableError, OSError) as exc:
+        except (ImportError, CameraUnavailableError, OSError, ValueError) as exc:
+            # ValueError covers an unrecognized backend name -- normally
+            # impossible since CameraBackendName is a pydantic Literal, but
+            # this is the last line of defense before camera init, so an
+            # unexpected value here should degrade to the dummy backend
+            # rather than take the whole app down.
             logger.warning("Camera backend %r unavailable (%s); falling back to dummy", backend, exc)
             return DummyBackend()
 
@@ -55,7 +60,7 @@ def create_camera_backend(
             candidate.open()
             logger.info("Auto-selected camera backend: %s", name)
             return candidate
-        except (ImportError, CameraUnavailableError, OSError) as exc:
+        except (ImportError, CameraUnavailableError, OSError, ValueError) as exc:
             logger.debug("Camera backend %r not available (%s)", name, exc)
 
     logger.info("No hardware camera detected; using dummy backend")

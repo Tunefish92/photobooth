@@ -37,7 +37,7 @@ class CameraConfig(BaseModel):
     opencv_device_index: int = 0
     # Delay before each shot after the first one in a multi-shot session
     # (grid/gif/boomerang); the first shot always uses flow.countdown_time_s.
-    inter_shot_delay_s: float = 1.0
+    inter_shot_delay_s: float = Field(default=1.0, ge=0)
 
 
 class GpioConfig(BaseModel):
@@ -55,16 +55,16 @@ class PrinterConfig(BaseModel):
     backend: PrinterBackendName = "cups"
     cups_printer_name: str = "Canon_SELPHY_CP1300"
     confirmation: bool = True
-    paper_width_mm: int = 148
-    paper_height_mm: int = 100
+    paper_width_mm: int = Field(default=148, gt=0)
+    paper_height_mm: int = Field(default=100, gt=0)
 
 
 class FlowConfig(BaseModel):
     show_preview: bool = True
-    greeter_time_s: float = 3
-    countdown_time_s: float = 3
-    display_time_s: float = 6
-    postprocess_time_s: float = 60
+    greeter_time_s: float = Field(default=3, ge=0)
+    countdown_time_s: float = Field(default=3, ge=0)
+    display_time_s: float = Field(default=6, ge=0)
+    postprocess_time_s: float = Field(default=60, ge=0)
     default_mode: CaptureMode = "single"
     enabled_modes: list[CaptureMode] = Field(
         default_factory=lambda: ["single", "grid", "gif", "boomerang"]
@@ -83,14 +83,14 @@ class FlowConfig(BaseModel):
 
 
 class LayoutConfig(BaseModel):
-    num_x: int = 2
-    num_y: int = 2
-    size_x: int = 3496
-    size_y: int = 2362
-    inner_dist_x: int = 20
-    inner_dist_y: int = 20
-    outer_dist_x: int = 40
-    outer_dist_y: int = 40
+    num_x: int = Field(default=2, gt=0)
+    num_y: int = Field(default=2, gt=0)
+    size_x: int = Field(default=3496, gt=0)
+    size_y: int = Field(default=2362, gt=0)
+    inner_dist_x: int = Field(default=20, ge=0)
+    inner_dist_y: int = Field(default=20, ge=0)
+    outer_dist_x: int = Field(default=40, ge=0)
+    outer_dist_y: int = Field(default=40, ge=0)
     skip: list[int] = Field(default_factory=list)
     background: str = ""
     overlay: str = ""

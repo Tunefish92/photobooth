@@ -3,7 +3,15 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from photobooth.config.settings import FlowConfig, Settings, load_settings, save_settings
+from photobooth.config.settings import (
+    CameraConfig,
+    FlowConfig,
+    LayoutConfig,
+    PrinterConfig,
+    Settings,
+    load_settings,
+    save_settings,
+)
 
 
 def test_load_settings_without_override_returns_defaults():
@@ -84,6 +92,61 @@ def test_load_settings_with_empty_enabled_modes_override_raises(tmp_path: Path):
     at startup rather than silently producing an unusable idle screen."""
     override = tmp_path / "config.toml"
     override.write_text("[flow]\nenabled_modes = []\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError):
+        load_settings(override)
+
+
+# -- numeric bounds hardening ------------------------------------------------
+# A handful of fields feed directly into image compositing math or Qt timer
+# durations; zero/negative values there previously produced either a
+# ZeroDivisionError deep in the compositor or undefined QTimer behavior
+# instead of a clear rejection at the config boundary.
+
+
+@pytest.mark.parametrize("field", ["num_x", "num_y", "size_x", "size_y"])
+def test_layout_config_rejects_zero_and_negative_dimensions(field):
+    for bad_value in (0, -1):
+        with pytest.raises(ValidationError):
+            LayoutConfig(**{field: bad_value})
+
+
+@pytest.mark.parametrize(
+    "field", ["inner_dist_x", "inner_dist_y", "outer_dist_x", "outer_dist_y"]
+)
+def test_layout_config_rejects_negative_margins_but_allows_zero(field):
+    LayoutConfig(**{field: 0})  # zero margin is valid (edge-to-edge grid)
+    with pytest.raises(ValidationError):
+        LayoutConfig(**{field: -1})
+
+
+@pytest.mark.parametrize("field", ["paper_width_mm", "paper_height_mm"])
+def test_printer_config_rejects_zero_and_negative_paper_size(field):
+    for bad_value in (0, -100):
+        with pytest.raises(ValidationError):
+            PrinterConfig(**{field: bad_value})
+
+
+def test_camera_config_rejects_negative_inter_shot_delay():
+    CameraConfig(inter_shot_delay_s=0)  # no delay at all is valid
+    with pytest.raises(ValidationError):
+        CameraConfig(inter_shot_delay_s=-0.5)
+
+
+@pytest.mark.parametrize(
+    "field", ["greeter_time_s", "countdown_time_s", "display_time_s", "postprocess_time_s"]
+)
+def test_flow_config_rejects_negative_durations(field):
+    FlowConfig(**{field: 0})  # instant/skip is valid
+    with pytest.raises(ValidationError):
+        FlowConfig(**{field: -1})
+
+
+def test_load_settings_with_negative_layout_size_override_raises(tmp_path: Path):
+    """Same guard, exercised through the real load_settings() path a
+    hand-edited config.toml would take."""
+    override = tmp_path / "config.toml"
+    override.write_text("[layout]\nsize_x = -10\n", encoding="utf-8")
 
     with pytest.raises(ValidationError):
         load_settings(override)

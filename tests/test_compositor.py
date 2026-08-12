@@ -85,3 +85,40 @@ def test_compute_layout_raises_when_margin_leaves_no_room_for_photos():
     raising an opaque "width and height must be > 0" deep inside resize()."""
     with pytest.raises(ValueError, match="no room for photos"):
         compute_layout((400, 400), make_layout(size_x=200, size_y=200, inner_dist_x=70, inner_dist_y=70, outer_dist_x=70, outer_dist_y=70))
+
+
+def test_compose_grid_missing_background_path_falls_back_to_white_canvas(tmp_path):
+    """A configured background path that doesn't exist on disk (e.g. the
+    file was moved/deleted after being set) must not crash the whole
+    postprocess step -- silently fall back to a blank white canvas."""
+    images = [Image.new("RGB", (400, 400), color) for color in ["red", "green", "blue", "yellow"]]
+    missing_bg = tmp_path / "does-not-exist.png"
+
+    composed = compose_grid(images, make_layout(), background=missing_bg)
+
+    assert composed.size == (1000, 1000)
+    corner = composed.getpixel((1, 1))
+    assert corner == (255, 255, 255)
+
+
+def test_compose_grid_missing_overlay_path_is_skipped(tmp_path):
+    images = [Image.new("RGB", (400, 400), color) for color in ["red", "green", "blue", "yellow"]]
+    missing_overlay = tmp_path / "does-not-exist.png"
+
+    composed = compose_grid(images, make_layout(), overlay=missing_overlay)
+
+    assert composed.size == (1000, 1000)
+    assert composed.mode == "RGB"
+
+
+def test_compose_grid_uses_real_background_image(tmp_path):
+    bg_path = tmp_path / "bg.png"
+    Image.new("RGB", (50, 50), (10, 20, 30)).save(bg_path)
+    images = [Image.new("RGB", (400, 400), "red")]
+    layout = make_layout(num_x=1, num_y=1)
+
+    composed = compose_grid(images, layout, background=bg_path)
+
+    # a corner far from the (centered) thumbnail should still show the
+    # background color, scaled up to the output size
+    assert composed.getpixel((1, 1)) == (10, 20, 30)
