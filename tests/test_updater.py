@@ -1,10 +1,18 @@
-"""Update-check/apply logic. Network (fetch_latest_version) and subprocess
-(apply_update's git/uv calls) are monkeypatched -- no live GitHub API calls
-or real git/uv invocations here, so this stays fast and hermetic.
+"""Update-check/apply logic.
+
+Most of these mock the network call (fetch_latest_version) and the
+subprocess calls (apply_update's git/uv) for speed and hermeticity. The
+integration test at the bottom of this file is the exception -- it runs
+apply_update()'s git fetch/checkout against two real local git repos
+(standing in for GitHub and the Pi's clone), only stubbing the `uv sync`
+step, to actually prove the checkout lands on the tagged commit's content
+and not just "whatever the default branch happens to be" -- pure argument-
+order assertions on a mocked subprocess.run can't catch that class of bug.
 """
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -167,3 +175,83 @@ def test_apply_update_stops_after_first_failure(monkeypatch, tmp_path):
         updater.apply_update("v0.2.0", repo_dir=tmp_path)
 
     assert calls == [["git", "fetch", "--tags", "origin"]]
+
+
+# -- real-git integration test -----------------------------------------------
+
+
+def _resolve_git() -> str:
+    found = shutil.which("git")
+    if found:
+        return found
+    windows_fallback = Path("C:/Program Files/Git/cmd/git.exe")
+    if windows_fallback.is_file():
+        return str(windows_fallback)
+    pytest.skip("git executable not found on PATH or in the usual Windows install location")
+
+
+def _git(git_exe: str, args: list[str], cwd: Path) -> None:
+    result = subprocess.run(
+        [git_exe, *args], cwd=cwd, capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+
+
+def test_apply_update_lands_on_the_tagged_commit_against_real_git_repos(monkeypatch, tmp_path):
+    """End-to-end: two real git repos (an "origin" and a clone of it,
+    standing in for GitHub and the Pi's checkout) with three commits --
+    v0.1.0, v0.2.0, and an untagged commit after it representing unreleased
+    work-in-progress on the default branch. The clone starts out sitting at
+    v0.1.0 (simulating "the Pi is running the previous release"). Only
+    `uv sync` is stubbed (it needs a real project to sync, which isn't what
+    this test is about); the git fetch/checkout is 100% real.
+
+    This is the check a mocked-subprocess test can't give you: that
+    apply_update() actually lands on the *tagged* commit's content, not
+    just wherever the origin's default branch happens to be (which here is
+    one commit *ahead* of the release it should stop at).
+    """
+    git_exe = _resolve_git()
+
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    _git(git_exe, ["init", "-q", "-b", "main"], origin)
+    _git(git_exe, ["config", "user.email", "test@example.com"], origin)
+    _git(git_exe, ["config", "user.name", "Test"], origin)
+
+    def commit_version(version: str, tag: str | None) -> None:
+        (origin / "VERSION").write_text(version)
+        _git(git_exe, ["add", "."], origin)
+        _git(git_exe, ["commit", "-q", "-m", version], origin)
+        if tag:
+            _git(git_exe, ["tag", tag], origin)
+
+    commit_version("0.1.0", "v0.1.0")
+    commit_version("0.2.0", "v0.2.0")
+    commit_version("0.3.0-dev", None)  # unreleased work past v0.2.0
+
+    clone = tmp_path / "clone"
+    _git(git_exe, ["clone", "-q", str(origin), str(clone)], tmp_path)
+    _git(git_exe, ["checkout", "-q", "v0.1.0"], clone)  # "currently running" release
+    assert (clone / "VERSION").read_text() == "0.1.0"
+
+    # apply_update's own executable resolution: real git, stubbed uv (its
+    # sync step is irrelevant to what this test is verifying).
+    def fake_find_executable(name: str) -> str:
+        return git_exe if name == "git" else name
+
+    def fake_run(command: list[str], cwd: Path) -> None:
+        if Path(command[0]).name.startswith("uv"):
+            return  # pretend `uv sync` succeeded
+        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr)
+
+    monkeypatch.setattr(updater, "_find_executable", fake_find_executable)
+    monkeypatch.setattr(updater, "_run", fake_run)
+
+    updater.apply_update("v0.2.0", repo_dir=clone)
+
+    assert (clone / "VERSION").read_text() == "0.2.0"  # landed exactly on the tag,
+    # not on the untagged "0.3.0-dev" commit that came after it on origin/main
+

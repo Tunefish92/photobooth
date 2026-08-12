@@ -467,6 +467,125 @@ def test_checking_for_updates_flags_a_newer_release_and_shows_the_badge(running_
         _pump(0.5)
 
 
+def test_check_for_updates_ignores_concurrent_calls(running_app):
+    """Tapping "Check for updates" repeatedly (or the startup timer racing
+    a manual check) must not fire a second background request while one is
+    already in flight -- checkForUpdates() guards on _update_checking."""
+    _app, _engine, controller, _warnings = running_app
+    call_count = 0
+
+    def counting_fetch():
+        nonlocal call_count
+        call_count += 1
+        return "v0.0.0"
+
+    with patch("photobooth.updater.fetch_latest_version", side_effect=counting_fetch):
+        controller.checkForUpdates()
+        controller.checkForUpdates()
+        controller.checkForUpdates()
+        _pump(0.5)
+
+    assert call_count == 1
+
+
+def test_check_for_updates_handles_network_failure_gracefully(running_app):
+    _app, _engine, controller, _warnings = running_app
+
+    def boom():
+        raise OSError("network unreachable")
+
+    with patch("photobooth.updater.fetch_latest_version", side_effect=boom):
+        controller.checkForUpdates()
+        _pump(0.5)
+
+    try:
+        assert controller.updateChecking is False
+        assert controller.updateAvailable is False
+        assert controller.updateError  # non-empty -- surfaced somewhere, not swallowed
+    finally:
+        controller.checkForUpdates()  # restore "up to date" baseline (fixture-level stub)
+        _pump(0.5)
+
+
+def test_apply_update_is_a_noop_without_an_available_update(running_app):
+    _app, _engine, controller, _warnings = running_app
+    assert controller.updateAvailable is False  # baseline from prior tests' cleanup
+
+    with patch("photobooth.updater.apply_update") as mock_apply:
+        controller.applyUpdate()
+        _pump(0.2)
+
+    mock_apply.assert_not_called()
+    assert controller.updateApplying is False
+
+
+def test_apply_update_failure_resets_state_and_emits_a_toast(running_app):
+    _app, _engine, controller, _warnings = running_app
+
+    with patch("photobooth.updater.fetch_latest_version", return_value="v99.0.0"):
+        controller.checkForUpdates()
+        _pump(0.5)
+    assert controller.updateAvailable is True
+
+    toasts: list[str] = []
+    controller.toast.connect(toasts.append)
+    try:
+        with patch(
+            "photobooth.updater.apply_update",
+            side_effect=RuntimeError("git checkout failed: fatal: bad tag"),
+        ):
+            controller.applyUpdate()
+            _pump(0.5)
+
+        assert controller.updateApplying is False
+        assert "bad tag" in controller.updateError
+        assert "Update failed" in toasts
+    finally:
+        controller.toast.disconnect(toasts.append)
+        controller.checkForUpdates()  # restore baseline
+        _pump(0.5)
+
+
+def test_apply_update_success_schedules_a_restart_via_quit(running_app):
+    """applyUpdate() must never restart anything itself beyond scheduling
+    QCoreApplication.quit() -- actually calling quit() here would tear down
+    the shared module-scoped app and break every later test in this file,
+    so QTimer.singleShot is intercepted to just record the scheduled call
+    instead of letting it fire.
+    """
+    _app, _engine, controller, _warnings = running_app
+
+    with patch("photobooth.updater.fetch_latest_version", return_value="v99.0.0"):
+        controller.checkForUpdates()
+        _pump(0.5)
+    assert controller.updateAvailable is True
+
+    scheduled: list[tuple[int, object]] = []
+
+    def fake_single_shot(msec, callback):
+        scheduled.append((msec, callback))
+
+    try:
+        with (
+            patch("photobooth.updater.apply_update", return_value=None),
+            patch("PySide6.QtCore.QTimer.singleShot", side_effect=fake_single_shot),
+        ):
+            controller.applyUpdate()
+            _pump(0.5)
+
+        restart_calls = [(msec, cb) for msec, cb in scheduled if cb is QCoreApplication.quit]
+        assert restart_calls, f"expected a QTimer.singleShot(_, QCoreApplication.quit) call, got {scheduled}"
+        assert restart_calls[0][0] == 1500
+    finally:
+        # On a real success path the process is about to exit, so
+        # _on_update_apply_done() has no reason to reset _update_applying --
+        # but this test intentionally prevented that exit to keep the
+        # shared app alive for later tests, so undo it by hand here.
+        controller._update_applying = False
+        controller.checkForUpdates()  # restore baseline
+        _pump(0.5)
+
+
 def test_layout_margin_preview_renders_and_tracks_grid_size(running_app):
     """The margin preview (paper rectangle + num_x*num_y photo rectangles)
     must actually lay out with a real, positive size inside the Layout tab's
