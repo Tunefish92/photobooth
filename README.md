@@ -30,16 +30,21 @@ UI that runs full-screen straight on the framebuffer.
 - Python 3.11 or newer
 - [uv](https://docs.astral.sh/uv/) for dependency management (installed
   below if you don't have it)
-- A working camera/printer/GPIO is **not** required for development — see
-  [Development](#development) below
 
-## Development
+## Scope: this only ever *runs* on a Raspberry Pi
 
-Without real camera/printer/GPIO hardware, the app automatically falls back
-to the dummy camera backend and a PDF "printer", so the full flow (idle →
-capture → review → share) is testable on a regular desktop.
+The app is built for one real target: a Raspberry Pi 4 running as a kiosk
+(see [Raspberry Pi deployment](#raspberry-pi-deployment) below). Windows is
+used only for editing and debugging the UI/code — it is **not** a
+functional test environment. Camera (`gphoto2`), printer (`pycups`), and
+GPIO (`gpiozero`/`lgpio`) integrations are Linux-only and are automatically
+skipped by `uv sync` on Windows (see the `sys_platform == 'linux'` markers
+in `pyproject.toml`), so on Windows the app always runs against the dummy
+camera backend and a PDF "printer" — enough to work on layout, flow, and
+Settings screens, but never a substitute for testing on the actual Pi with
+the real hardware.
 
-### Windows
+### Windows (UI/code editing only)
 
 1. Install Python 3.11+ from [python.org](https://www.python.org/downloads/)
    or the Microsoft Store, making sure "Add python.exe to PATH" is checked.
@@ -59,66 +64,22 @@ capture → review → share) is testable on a regular desktop.
    uv run photobooth
    ```
    It launches windowed by default on non-Linux platforms. To force a
-   specific window size or fullscreen for testing, edit `app.fullscreen`/
-   `app.width`/`app.height` in the user config (see
+   specific window size or fullscreen for a quick look at the kiosk layout,
+   edit `app.fullscreen`/`app.width`/`app.height` in the user config (see
    [Configuration](#configuration)) — no need to touch the defaults file.
+   Remember this is still running against the dummy camera/PDF printer;
+   it's for checking the UI renders and behaves correctly, not for
+   validating capture/print/GPIO behavior.
 5. Run the tests:
    ```powershell
    uv run pytest
    ```
 
-Camera/printer/GPIO hardware integrations (`gphoto2`, `gpiozero`, `lgpio`,
-`pycups`) are Linux-only and are automatically skipped by `uv sync` on
-Windows (see the `sys_platform == 'linux'` markers in `pyproject.toml`) —
-you'll always get the dummy camera and PDF printer backends here, which is
-enough to develop and test the UI, flow, and settings.
-
-### Linux (desktop, for development)
-
-This covers a regular Linux desktop (e.g. Ubuntu/Debian) for development —
-see [Raspberry Pi deployment](#raspberry-pi-deployment) below for the
-actual kiosk target.
-
-1. Install Python 3.11+ and the Qt platform libraries PySide6 needs at
-   runtime (package names below are for Debian/Ubuntu; adjust for your
-   distro):
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y python3 python3-venv \
-       libegl1 libgles2 libxkbcommon0 fontconfig libdbus-1-3
-   ```
-2. Install `uv`:
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   # restart your shell, or: export PATH="$HOME/.local/bin:$PATH"
-   ```
-3. Clone the repo and set up the environment:
-   ```bash
-   git clone https://github.com/Tunefish92/photobooth.git
-   cd photobooth
-   uv sync --group dev
-   ```
-   On Linux this also pulls in `gphoto2`, `gpiozero`, `lgpio`, and `pycups`
-   (all Linux-only). `gphoto2` and `pycups` compile a small C extension, so
-   if the sync fails while building them, install a compiler toolchain plus
-   the matching dev headers first:
-   ```bash
-   sudo apt-get install -y build-essential python3-dev pkg-config \
-       libgphoto2-dev libcups2-dev
-   ```
-4. Run the app and tests:
-   ```bash
-   uv run photobooth
-   uv run pytest
-   ```
-
-Without a real camera/printer, this still runs fully via the dummy camera
-and PDF printer backends, same as on Windows.
-
 ## Raspberry Pi deployment
 
-Target: Raspberry Pi 4 (4GB), 64-bit Raspberry Pi OS (Bookworm), booted to
-the desktop or console — the kiosk runs directly on the framebuffer via
+This is the only environment the app is actually meant to run in. Target:
+Raspberry Pi 4 (4GB), 64-bit Raspberry Pi OS (Bookworm), booted to the
+desktop or console — the kiosk runs directly on the framebuffer via
 `eglfs`, no desktop environment required at runtime.
 
 1. Flash Raspberry Pi OS (64-bit, Bookworm) with Raspberry Pi Imager, boot
