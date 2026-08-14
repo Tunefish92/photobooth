@@ -120,16 +120,17 @@ interactive login session.
    and the build toolchain `gphoto2`/`pycups`/`lgpio` need to compile their
    C extensions — creates a `.venv` with access to the apt-installed
    `picamera2`, syncs the pinned dependencies into it via `uv sync`
-   (respecting `uv.lock`), installs a desktop autostart entry (see
-   [`scripts/photobooth.desktop`](scripts/photobooth.desktop) and
-   [`scripts/run-kiosk.sh`](scripts/run-kiosk.sh)), and sets the Pi to boot
-   straight to the desktop with auto-login.
+   (respecting `uv.lock`), installs a desktop autostart entry plus a
+   Desktop shortcut (see [`scripts/photobooth.desktop`](scripts/photobooth.desktop)
+   and [`scripts/run-kiosk.sh`](scripts/run-kiosk.sh)), and sets the Pi to
+   boot straight to the desktop with auto-login.
 4. The script prints two manual steps at the end: registering the SELPHY
    printer's exact USB device URI in CUPS (varies per unit — the script
    walks through both the driverless and gutenprint-driver paths), and
    rebooting to pick everything up. Both are one-time, hardware-specific
    steps that can't be scripted generically.
-5. Check on it — from a terminal in the desktop session (not over SSH, it
+5. Check on it — either double-click the **Photobooth** icon on the
+   desktop, or from a terminal in the desktop session (not over SSH, it
    needs the desktop's Wayland display):
    ```bash
    scripts/run-kiosk.sh

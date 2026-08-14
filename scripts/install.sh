@@ -15,7 +15,8 @@
 #   3. Installs a desktop autostart entry (scripts/photobooth.desktop) that
 #      launches the app -- as a normal fullscreen window under the
 #      desktop's own Wayland compositor -- once the desktop session starts,
-#      and sets the Pi to boot straight to Desktop with auto-login.
+#      plus a Desktop shortcut for launching/relaunching it by hand, and
+#      sets the Pi to boot straight to Desktop with auto-login.
 #
 # This requires the Desktop Raspberry Pi OS image, not Lite -- the app
 # relies on the desktop's compositor (labwc) to own the display, sidestepping
@@ -78,7 +79,23 @@ chmod +x "$REPO_DIR/scripts/run-kiosk.sh"
 AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
 mkdir -p "$AUTOSTART_DIR"
 sed "s#/opt/photobooth#${REPO_DIR}#g" scripts/photobooth.desktop > "$AUTOSTART_DIR/photobooth.desktop"
+# Hide the autostart copy from the applications menu -- it's not meant to
+# be launched by hand, that's what the Desktop shortcut below is for.
+echo "NoDisplay=true" >> "$AUTOSTART_DIR/photobooth.desktop"
 chown "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.config" "$AUTOSTART_DIR" "$AUTOSTART_DIR/photobooth.desktop"
+
+echo "==> Adding a Desktop shortcut"
+DESKTOP_DIR="$TARGET_HOME/Desktop"
+mkdir -p "$DESKTOP_DIR"
+SHORTCUT="$DESKTOP_DIR/Photobooth.desktop"
+sed "s#/opt/photobooth#${REPO_DIR}#g" scripts/photobooth.desktop > "$SHORTCUT"
+chmod +x "$SHORTCUT"
+chown "$TARGET_USER:$TARGET_USER" "$DESKTOP_DIR" "$SHORTCUT"
+# PCManFM refuses to launch a .desktop file on double-click until it's
+# marked trusted, otherwise it just shows an "Untrusted launcher" prompt.
+if command -v gio >/dev/null 2>&1; then
+    sudo -u "$TARGET_USER" gio set "$SHORTCUT" metadata::trusted true 2>/dev/null || true
+fi
 
 echo "==> Removing the old console-kiosk systemd service, if present"
 systemctl disable --now photobooth.service 2>/dev/null || true

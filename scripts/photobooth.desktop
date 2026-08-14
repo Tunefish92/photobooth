@@ -3,5 +3,5 @@ Type=Application
 Name=Photobooth
 Comment=Photobooth kiosk
 Exec=/opt/photobooth/scripts/run-kiosk.sh
+Icon=/opt/photobooth/src/photobooth/ui/icon.png
 X-GNOME-Autostart-enabled=true
-NoDisplay=true
