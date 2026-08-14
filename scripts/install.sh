@@ -37,7 +37,7 @@ apt-get install -y \
     cups cups-client libcups2-dev \
     printer-driver-gutenprint \
     ipp-usb \
-    build-essential python3-dev pkg-config \
+    build-essential python3-dev pkg-config swig \
     libegl1 libgles2 libgbm1 libinput10 \
     libxkbcommon0 fontconfig libfontconfig1 libdbus-1-3 \
     curl git
