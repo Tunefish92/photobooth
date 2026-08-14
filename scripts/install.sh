@@ -69,6 +69,10 @@ sed "s#/opt/photobooth#${REPO_DIR}#g; s#User=pi#User=${TARGET_USER}#; s#Group=pi
 systemctl daemon-reload
 systemctl enable photobooth.service
 
+echo "==> Freeing tty1 for the kiosk (photobooth.service attaches to it directly)"
+systemctl disable --now getty@tty1.service 2>/dev/null || true
+systemctl mask getty@tty1.service
+
 cat <<EOF
 
 ==> Done. Two manual steps remain:

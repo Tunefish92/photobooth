@@ -1,7 +1,8 @@
 [Unit]
 Description=Photobooth kiosk
-After=graphical.target network-online.target cups.service
+After=network-online.target cups.service getty@tty1.service
 Wants=network-online.target
+Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
@@ -15,8 +16,22 @@ ExecStart=/opt/photobooth/.venv/bin/photobooth
 Restart=always
 RestartSec=2
 
+# Attach to a real VT/login session (PAM + logind), the same way
+# getty@.service does. Without this, the eglfs/KMS backend runs with no
+# controlling tty and no logind seat session, so it never acquires DRM
+# master and fails to get the cursor plane / EGL surface (EACCES on the
+# cursor ioctl, EGL_BAD_MATCH creating the surface) even though the user
+# is in the video/render groups.
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+PAMName=login
+TTYReset=yes
+TTYVTDisallocate=yes
+
 # Needs access to the framebuffer/DRM, input devices, USB (gphoto2/printer/USB export)
 SupplementaryGroups=video render input plugdev lp lpadmin
 
 [Install]
-WantedBy=graphical.target
+WantedBy=multi-user.target
