@@ -12,6 +12,7 @@ Button {
     // environment, draw it as a small vector gear instead (see
     // GearIcon.qml), which is centered by construction.
     property bool vectorGear: false
+    property bool vectorPower: false
     implicitWidth: 60
     implicitHeight: 60
 
@@ -28,8 +29,15 @@ Button {
             height: 26
             color: Theme.textPrimary
         }
+        PowerIcon {
+            visible: root.vectorPower
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            color: Theme.textPrimary
+        }
         Text {
-            visible: !root.vectorGear
+            visible: !root.vectorGear && !root.vectorPower
             text: root.glyph
             color: Theme.textPrimary
             font.pixelSize: 26

@@ -69,7 +69,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.right: parent.right
         anchors.margins: Theme.spaceLg
-        glyph: "⏻"
+        vectorPower: true
         onClicked: exitConfirm.visible = true
     }
 
@@ -105,7 +105,7 @@ Item {
             Repeater {
                 model: App.enabledModes
                 delegate: ModeTile {
-                    glyph: modelData === "single" ? "📷" : modelData === "grid" ? "▦" : modelData === "gif" ? "🎞" : "🔁"
+                    mode: modelData
                     label: Translator.tr("idle.mode." + modelData)
                     onActivated: App.start(modelData, App.defaultFilter)
                 }

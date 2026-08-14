@@ -3,7 +3,7 @@ import "../"
 
 GlassCard {
     id: root
-    property string glyph: "*"
+    property string mode: "single"
     property string label: ""
     signal activated()
 
@@ -18,11 +18,15 @@ GlassCard {
         anchors.centerIn: parent
         spacing: Theme.spaceSm
 
-        Text {
-            text: root.glyph
-            font.pixelSize: 56
-            color: Theme.accentC
+        Item {
+            width: 56
+            height: 56
             anchors.horizontalCenter: parent.horizontalCenter
+
+            CameraIcon { anchors.fill: parent; color: Theme.accentC; visible: root.mode === "single" }
+            GridIcon { anchors.fill: parent; color: Theme.accentC; visible: root.mode === "grid" }
+            FilmIcon { anchors.fill: parent; color: Theme.accentC; visible: root.mode === "gif" }
+            RepeatIcon { anchors.fill: parent; color: Theme.accentC; visible: root.mode === "boomerang" }
         }
         Text {
             text: root.label
