@@ -317,12 +317,25 @@ def test_settings_gear_button_uses_the_vector_gear_icon(running_app):
     assert gear_button is not None
     assert gear_button.property("vectorGear") is True
 
-    gear_icons = [
+    visible_icons = [
         k for k in gear_button.findChildren(QQuickItem)
-        if _is_instance_of(k, "Canvas")
+        if _is_instance_of(k, "Canvas") and k.property("visible") is True
     ]
-    assert len(gear_icons) == 1, "expected exactly one Canvas-based GearIcon"
-    assert gear_icons[0].property("visible") is True
+    assert len(visible_icons) == 1, "expected exactly one visible Canvas-based icon (the gear)"
+
+
+def test_exit_button_uses_the_vector_power_icon(running_app):
+    """Regression test: the "⏻" POWER Unicode glyph isn't reliably covered
+    by fonts on a minimal kiosk install (renders as a blank box), so the
+    idle screen's exit button now draws a small vector power icon instead
+    (PowerIcon.qml). Confirm the button still opted into that mode."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+    assert controller.state == "idle"
+
+    exit_button = root.findChild(QQuickItem, "exitButton")
+    assert exit_button is not None
+    assert exit_button.property("vectorPower") is True
 
 
 def test_photo_modes_tab_has_a_switch_per_mode_all_enabled_by_default(running_app):
