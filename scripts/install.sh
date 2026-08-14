@@ -36,7 +36,7 @@ apt-get install -y \
     libgphoto2-dev gphoto2 \
     cups cups-client libcups2-dev \
     printer-driver-gutenprint \
-    ippusbxd \
+    ipp-usb \
     build-essential python3-dev pkg-config \
     libegl1 libgles2 libgbm1 libinput10 \
     libxkbcommon0 fontconfig libfontconfig1 libdbus-1-3 \
@@ -75,7 +75,7 @@ cat <<EOF
 
 1. Register the Canon SELPHY printer (CP1300/CP1500) in CUPS. Plug it in,
    then check whether CUPS already sees it as a driverless IPP-over-USB
-   device (ippusbxd, installed above, handles this for printers that
+   device (ipp-usb, installed above, handles this for printers that
    support it -- most CP1300/CP1500 units do):
      lpinfo -v
    If a line like "ipp://..." or "dnssd://..." shows up for the printer,
