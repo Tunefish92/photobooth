@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Photobooth
+Comment=Photobooth kiosk
+Exec=/opt/photobooth/scripts/run-kiosk.sh
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

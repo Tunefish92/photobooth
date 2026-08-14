@@ -2,7 +2,7 @@
 # CRLF line endings in install.sh would break its "#!/usr/bin/env bash"
 # shebang on Linux (the Pi it's meant to run on).
 *.sh text eol=lf
-scripts/photobooth.service text eol=lf
+scripts/photobooth.desktop text eol=lf
 *.py text eol=lf
 *.qml text eol=lf
 *.toml text eol=lf

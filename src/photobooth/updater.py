@@ -4,9 +4,9 @@ Update flow: fetch the latest release tag, compare it to the running
 `__version__`, and if newer, `git checkout` that exact tag (not just
 whatever HEAD of main happens to be -- the running code should always match
 a real, tagged release) followed by `uv sync` to pick up any dependency
-changes. The app then exits; the systemd unit's `Restart=always` brings it
-back up running the new code (see `scripts/photobooth.service`). This only
-ever does anything useful on the Pi deployment (a real git clone managed by
+changes. The app then exits; the desktop autostart wrapper's restart loop
+(see `scripts/run-kiosk.sh`) brings it back up running the new code. This
+only ever does anything useful on the Pi deployment (a real git clone managed by
 `scripts/install.sh`) -- on a Windows/macOS dev checkout it will generally
 just fail the git/uv steps harmlessly if triggered.
 """

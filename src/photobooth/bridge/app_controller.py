@@ -452,7 +452,7 @@ class AppController(QObject):
     def _on_update_apply_done(self, _result: None) -> None:
         self.toast.emit(self.translator.tr("settings.update.restart_notice"))
         # Give the toast a moment to actually render before the process
-        # exits; systemd's Restart=always (see photobooth.service) brings
+        # exits; the autostart wrapper's restart loop (see run-kiosk.sh) brings
         # the app back up running the code we just checked out.
         QTimer.singleShot(1500, QCoreApplication.quit)
 
