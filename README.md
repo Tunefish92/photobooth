@@ -2,7 +2,7 @@
 
 A modern, native photobooth application for Raspberry Pi 4 (4GB). Built with
 Python 3.11+ and PySide6/Qt Quick — no browser, no Electron, GPU-composited
-UI that runs full-screen straight on the framebuffer.
+UI that autostarts full-screen on top of the desktop.
 
 <p align="center">
   <center><img src="docs/screenshots/idle.png" alt="Main idle screen" width="100%"></center>
@@ -95,12 +95,15 @@ the real hardware.
 ## Raspberry Pi deployment
 
 This is the only environment the app is actually meant to run in. Target:
-Raspberry Pi 4 (4GB), 64-bit Raspberry Pi OS (Bookworm), booted to the
-desktop or console — the kiosk runs directly on the framebuffer via
-`eglfs`, no desktop environment required at runtime.
+Raspberry Pi 4 (4GB), 64-bit Raspberry Pi OS **Desktop** (not Lite) — the
+app runs as a normal fullscreen window under the desktop's own Wayland
+compositor (`labwc`), autostarted once the desktop session comes up. This
+sidesteps the DRM/KMS master/permission issues a direct-framebuffer
+(`eglfs`) kiosk would otherwise fight with when launched outside of an
+interactive login session.
 
-1. Flash Raspberry Pi OS (64-bit, Bookworm) with Raspberry Pi Imager, boot
-   the Pi, and make sure it has network access.
+1. Flash Raspberry Pi OS (64-bit, **Desktop**) with Raspberry Pi Imager,
+   boot the Pi, and make sure it has network access.
 2. Clone the repo onto the Pi:
    ```bash
    git clone https://github.com/Tunefish92/photobooth.git
@@ -113,27 +116,28 @@ desktop or console — the kiosk runs directly on the framebuffer via
    This installs every system package the app needs — camera stack
    (`picamera2`/`libcamera`), `gphoto2`, CUPS plus the `gutenprint` driver
    and driverless IPP-over-USB support (for the Canon SELPHY CP1300/
-   CP1500), the Qt/EGLFS runtime libraries PySide6 needs to draw to the
-   framebuffer, and the build toolchain `gphoto2`/`pycups`/`lgpio` need to
-   compile their C extensions — creates a `.venv` with access to the
-   apt-installed `picamera2`, syncs the pinned dependencies into it via
-   `uv sync` (respecting `uv.lock`), and installs+enables the
-   `photobooth.service` systemd unit (see
-   [`scripts/photobooth.service`](scripts/photobooth.service)).
+   CP1500), the Qt/EGL/Wayland runtime libraries PySide6 needs at runtime,
+   and the build toolchain `gphoto2`/`pycups`/`lgpio` need to compile their
+   C extensions — creates a `.venv` with access to the apt-installed
+   `picamera2`, syncs the pinned dependencies into it via `uv sync`
+   (respecting `uv.lock`), installs a desktop autostart entry (see
+   [`scripts/photobooth.desktop`](scripts/photobooth.desktop) and
+   [`scripts/run-kiosk.sh`](scripts/run-kiosk.sh)), and sets the Pi to boot
+   straight to the desktop with auto-login.
 4. The script prints two manual steps at the end: registering the SELPHY
    printer's exact USB device URI in CUPS (varies per unit — the script
    walks through both the driverless and gutenprint-driver paths), and
-   starting the service (or just reboot). Both are one-time, hardware-
-   specific steps that can't be scripted generically.
-5. Check on it:
+   rebooting to pick everything up. Both are one-time, hardware-specific
+   steps that can't be scripted generically.
+5. Check on it — from a terminal in the desktop session (not over SSH, it
+   needs the desktop's Wayland display):
    ```bash
-   sudo systemctl status photobooth.service
-   journalctl -u photobooth.service -f
+   scripts/run-kiosk.sh
    ```
 
 Re-running `sudo scripts/install.sh` after a `git pull` is safe — it's
-idempotent (re-syncs dependencies, re-installs the systemd unit) and won't
-duplicate anything.
+idempotent (re-syncs dependencies, re-installs the autostart entry) and
+won't duplicate anything.
 
 ## Configuration
 
@@ -164,7 +168,7 @@ src/photobooth/
 └── config/          Settings model + defaults.toml
 tests/               pytest suite (state machine, compositor, config,
                      translations, and headless QML smoke tests)
-scripts/             install.sh + the systemd unit it installs
+scripts/             install.sh + the desktop autostart entry it installs
 ```
 
 ## Running the tests
