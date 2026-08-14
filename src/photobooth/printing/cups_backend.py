@@ -1,7 +1,7 @@
 """Prints via CUPS -- targets a Canon SELPHY CP1300/CP1500 by default.
 
 The Pi-side setup (see `scripts/install.sh`) registers the printer in CUPS
-via driverless IPP-over-USB (ippusbxd) or the gutenprint driver, whichever
+via driverless IPP-over-USB (ipp-usb) or the gutenprint driver, whichever
 the unit supports; this backend just submits jobs to whatever CUPS queue
 name is configured (`PrinterConfig.cups_printer_name`).
 """

@@ -5,7 +5,7 @@ Python 3.11+ and PySide6/Qt Quick — no browser, no Electron, GPU-composited
 UI that runs full-screen straight on the framebuffer.
 
 <p align="center">
-  <center><img src="docs/screenshots/idle.png" alt="Main idle screen" width="75%"></center>
+  <center><img src="docs/screenshots/idle.png" alt="Main idle screen" width="100%"></center>
 </p>
 
 <details>
