@@ -5,6 +5,16 @@ default (`Gpio.enable = false`) so it's a no-op on machines without the
 hardware (e.g. this dev environment). Button callbacks fire on gpiozero's
 own background thread; since this is a QObject living on the main thread,
 Qt automatically queues the signal emissions back to the main thread.
+
+Wiring: all pin numbers are BCM GPIO numbering (see GpioConfig). Buttons
+use gpiozero's default `pull_up=True` -- wire one leg to the GPIO pin and
+the other to a GND pin on the header, no external pull resistor needed;
+the button reads pressed when it pulls the pin low. The lamp and RGB LED
+channels are active-high outputs (through a transistor/driver for
+anything drawing more current than a GPIO pin can source directly).
+gpiozero auto-selects its `lgpio`-backed pin factory on Raspberry Pi OS
+(bookworm/trixie) since `lgpio` is installed alongside it -- no explicit
+`Device.pin_factory` needed.
 """
 
 from __future__ import annotations
@@ -40,9 +50,12 @@ class GpioController(QObject):
             return
 
         try:
-            trigger_button = gpiozero.Button(self._config.trigger_pin)
+            # bounce_time debounces the raw contact bounce of a mechanical
+            # button -- without it a single press can fire when_pressed
+            # several times (e.g. double-starting a session).
+            trigger_button = gpiozero.Button(self._config.trigger_pin, bounce_time=0.05)
             trigger_button.when_pressed = self.trigger_pressed.emit
-            exit_button = gpiozero.Button(self._config.exit_pin)
+            exit_button = gpiozero.Button(self._config.exit_pin, bounce_time=0.05)
             exit_button.when_pressed = self.exit_pressed.emit
             self._lamp = gpiozero.LED(self._config.lamp_pin)
             self._rgb = gpiozero.RGBLED(

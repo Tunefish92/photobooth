@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from photobooth.config.settings import (
     CameraConfig,
     FlowConfig,
+    GpioConfig,
     LayoutConfig,
     PrinterConfig,
     Settings,
@@ -150,3 +151,36 @@ def test_load_settings_with_negative_layout_size_override_raises(tmp_path: Path)
 
     with pytest.raises(ValidationError):
         load_settings(override)
+
+
+# -- GPIO pin validity -------------------------------------------------------
+# BCM 2-27 is the range actually broken out on the 40-pin header (0/1 are
+# reserved for HAT EEPROM ID). Pins are also role-exclusive: gpiozero raises
+# GPIOPinInUse the moment two roles claim the same pin, which previously
+# only surfaced as "GPIO enabled" silently never appearing in the log --
+# reject it at the config boundary instead, with a message that says why.
+
+_GPIO_PIN_FIELDS = ["exit_pin", "trigger_pin", "lamp_pin", "chan_r_pin", "chan_g_pin", "chan_b_pin"]
+
+
+@pytest.mark.parametrize("field", _GPIO_PIN_FIELDS)
+def test_gpio_config_rejects_out_of_range_pins(field):
+    # Distinct placeholder pins for the *other* five roles, well clear of
+    # the 2/27 boundary values under test, so only `field` varies.
+    base = {name: 10 + i for i, name in enumerate(_GPIO_PIN_FIELDS)}
+    del base[field]
+
+    GpioConfig(**base, **{field: 2})  # low end of the header's usable range
+    GpioConfig(**base, **{field: 27})  # high end
+    for bad_value in (0, 1, 28, -1):
+        with pytest.raises(ValidationError):
+            GpioConfig(**base, **{field: bad_value})
+
+
+def test_gpio_config_rejects_duplicate_pins():
+    with pytest.raises(ValidationError):
+        GpioConfig(trigger_pin=17, exit_pin=17)
+
+
+def test_gpio_config_accepts_all_distinct_pins():
+    GpioConfig(exit_pin=24, trigger_pin=23, lamp_pin=4, chan_r_pin=27, chan_g_pin=22, chan_b_pin=17)
