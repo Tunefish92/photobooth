@@ -96,6 +96,19 @@ class LayoutConfig(BaseModel):
     overlay: str = ""
 
 
+class BurstConfig(BaseModel):
+    """Shot count and output size for the animated ("gif"/"boomerang")
+    modes -- the equivalent of LayoutConfig's num_x/num_y/size_x/size_y for
+    the modes that don't go through the grid compositor."""
+
+    gif_shot_count: int = Field(default=6, gt=0)
+    gif_frame_duration_ms: int = Field(default=150, gt=0)
+    gif_frame_max_width_px: int = Field(default=900, gt=0)
+    boomerang_shot_count: int = Field(default=12, gt=0)
+    boomerang_frame_duration_ms: int = Field(default=80, gt=0)
+    boomerang_frame_max_width_px: int = Field(default=900, gt=0)
+
+
 class EffectsConfig(BaseModel):
     enabled_filters: list[FilterName] = Field(
         default_factory=lambda: ["none", "bw", "sepia", "vintage", "vivid"]
@@ -151,6 +164,7 @@ class Settings(BaseModel):
     printer: PrinterConfig = Field(default_factory=PrinterConfig)
     flow: FlowConfig = Field(default_factory=FlowConfig)
     layout: LayoutConfig = Field(default_factory=LayoutConfig)
+    burst: BurstConfig = Field(default_factory=BurstConfig)
     effects: EffectsConfig = Field(default_factory=EffectsConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     mailer: MailerConfig = Field(default_factory=MailerConfig)

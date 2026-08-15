@@ -60,6 +60,14 @@ skip = []
 background = ""
 overlay = ""
 
+[burst]
+gif_shot_count = 6
+gif_frame_duration_ms = 150
+gif_frame_max_width_px = 900
+boomerang_shot_count = 12
+boomerang_frame_duration_ms = 80
+boomerang_frame_max_width_px = 900
+
 [effects]
 enabled_filters = ["none", "bw", "sepia", "vintage", "vivid"]
 default_filter = "none"

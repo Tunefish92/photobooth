@@ -57,6 +57,8 @@ def test_every_settings_field_label_has_a_translation():
         "grid_columns", "grid_rows", "output_width", "output_height", "margin",
         "margin_preview_hint", "background_path", "overlay_path",
         "default_filter", "chroma_key", "chroma_key_path",
+        "gif_shot_count", "gif_frame_duration", "gif_frame_width",
+        "boomerang_shot_count", "boomerang_frame_duration", "boomerang_frame_width",
     }
     en = _load("en")
     for field in expected_fields:
