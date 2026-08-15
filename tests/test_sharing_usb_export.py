@@ -1,8 +1,6 @@
-"""USB export is the one sharing backend testable without hitting a real
-network (email/webdav are intentionally left untested here -- they'd need
-either live credentials or extensive mocking of smtplib/httpx for little
-guarantee, since the interesting failure modes are on the server side).
-"""
+"""USB export tests. See test_sharing_mailer.py and test_sharing_webdav.py
+for the email/WebDAV backends (mocked smtplib/httpx rather than a live
+server or credentials)."""
 
 import sys
 from pathlib import Path

@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from photobooth.config.settings import (
+    AppConfig,
     CameraConfig,
     FlowConfig,
     GpioConfig,
@@ -184,3 +185,18 @@ def test_gpio_config_rejects_duplicate_pins():
 
 def test_gpio_config_accepts_all_distinct_pins():
     GpioConfig(exit_pin=24, trigger_pin=23, lamp_pin=4, chan_r_pin=27, chan_g_pin=22, chan_b_pin=17)
+
+
+# -- themes -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "theme", ["aurora-dark", "aurora-light", "ocean-blue", "forest-green", "prism-modern"]
+)
+def test_app_config_accepts_every_theme(theme):
+    AppConfig(theme=theme)
+
+
+def test_app_config_rejects_unknown_theme():
+    with pytest.raises(ValidationError):
+        AppConfig(theme="not-a-real-theme")

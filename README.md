@@ -23,6 +23,17 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 </details>
 
+<details>
+<summary><b>Themes</b> (Settings -> General -> Theme; the screenshot above is Aurora Dark, the default)</summary>
+<br>
+
+| | |
+|---|---|
+| **Aurora Light** ![Aurora Light](docs/screenshots/theme_aurora-light.png) | **Ocean Blue** ![Ocean Blue](docs/screenshots/theme_ocean-blue.png) |
+| **Forest Green** ![Forest Green](docs/screenshots/theme_forest-green.png) | **Prism Modern** ![Prism Modern](docs/screenshots/theme_prism-modern.png) |
+
+</details>
+
 ## Features
 
 - Single / grid / GIF / boomerang capture modes, individually toggled on/off
@@ -43,7 +54,10 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   `src/photobooth/hardware/gpio.py` for wiring notes)
 - In-app, PIN-gated settings covering every option above, plus an
   on-screen exit-with-confirmation button
-- English/German UI
+- Five selectable themes (Settings -> General -> Theme): the original
+  soft-pastel Aurora in dark/light, plus Ocean Blue, Forest Green, and the
+  bold, saturated Prism Modern
+- English/German UI, fully translated
 - Idle-screen slideshow of recent shots, SQLite-indexed
 
 ## Requirements

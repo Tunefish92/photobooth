@@ -18,7 +18,7 @@ CameraBackendName = Literal["auto", "gphoto2", "picamera2", "opencv", "dummy"]
 PrinterBackendName = Literal["cups", "pdf"]
 CaptureMode = Literal["single", "grid", "gif", "boomerang"]
 FilterName = Literal["none", "bw", "sepia", "vintage", "vivid"]
-ThemeName = Literal["aurora-dark", "aurora-light"]
+ThemeName = Literal["aurora-dark", "aurora-light", "ocean-blue", "forest-green", "prism-modern"]
 
 
 class AppConfig(BaseModel):

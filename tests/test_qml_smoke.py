@@ -301,6 +301,54 @@ def test_settings_language_selector_offers_only_en_and_de(running_app):
     _pump(0.3)
 
 
+def test_settings_theme_selector_offers_all_five_themes(running_app):
+    """Regression test: the theme dropdown must list every ThemeName the
+    backend accepts (see Settings.AppConfig) -- previously only the two
+    aurora variants existed, both in the combo and in Theme.qml's palette
+    table; this guards the two staying in sync as themes are added."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    combo = root.findChild(QQuickItem, "settingsThemeCombo")
+    assert combo is not None
+    assert list(combo.property("model")) == [
+        "aurora-dark", "aurora-light", "ocean-blue", "forest-green", "prism-modern",
+    ]
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_saving_a_theme_choice_updates_the_live_theme_singleton(running_app):
+    """Regression test: main.qml used to hardcode Theme.dark = true at
+    startup and never read the persisted app.theme at all -- the theme
+    dropdown had no visible effect no matter what was picked. Confirm
+    App.theme (bound to Theme.name via a Binding in main.qml) actually
+    reaches the Theme singleton, by checking the root Window's own
+    `color: Theme.bg` binding picks up the new palette's background."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    data = controller.getSettingsJson()
+    original_theme = data["app"]["theme"]
+    try:
+        data["app"]["theme"] = "prism-modern"
+        controller.saveSettingsJson(data)
+        _pump(0.3)
+
+        assert controller.property("theme") == "prism-modern"
+        assert root.property("color").name() == "#0b0b12"  # prism-modern's bg
+    finally:
+        data = controller.getSettingsJson()
+        data["app"]["theme"] = original_theme
+        controller.saveSettingsJson(data)
+        _pump(0.3)
+
+
 def test_settings_gear_button_uses_the_vector_gear_icon(running_app):
     """Regression test: the "⚙" GEAR Unicode glyph's visible ink isn't
     centered within its own character cell (how far off varies by font and

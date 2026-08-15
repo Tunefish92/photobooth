@@ -7,9 +7,18 @@ value blank. These are pure-Python/filesystem checks (no Qt/QML needed).
 from __future__ import annotations
 
 import json
+import re
 from importlib import resources
+from pathlib import Path
 
 _SUPPORTED_LANGUAGES = {"en", "de"}
+_UI_DIR = Path(__file__).resolve().parent.parent / "src" / "photobooth" / "ui"
+# Matches Translator.tr("literal.key") -- deliberately not string
+# concatenation like Translator.tr("idle.mode." + mode), which by
+# construction can only resolve to one of a small enumerated set of
+# already-covered keys (see idle.mode.* in test_photo_modes_tab_and_
+# all_modes_are_translated below).
+_TR_CALL = re.compile(r'Translator\.tr\(\s*"([^"]+)"\s*\)')
 
 
 def _load(lang: str) -> dict[str, str]:
@@ -104,3 +113,27 @@ def test_update_feature_is_fully_translated():
     ):
         assert key in en, f"missing translation key {key!r}"
         assert en[key].strip()
+
+
+def test_every_literal_translator_tr_call_in_qml_resolves():
+    """Broader net than test_every_settings_field_label_has_a_translation
+    (which only covers SettingsScreen.qml's settings.field.* keys): scans
+    every .qml file under src/photobooth/ui for Translator.tr("literal")
+    call sites and confirms each one exists in the catalog. A key used in
+    QML but never added to en.json would otherwise just silently render as
+    the raw key string (see Translator.tr's fallback) instead of failing
+    anything -- this is the guard against ever shipping that.
+    """
+    en = _load("en")
+    qml_files = list(_UI_DIR.rglob("*.qml"))
+    assert qml_files, f"no .qml files found under {_UI_DIR} -- test isn't finding the UI source"
+
+    missing: list[str] = []
+    for path in qml_files:
+        text = path.read_text(encoding="utf-8")
+        for match in _TR_CALL.finditer(text):
+            key = match.group(1)
+            if key not in en:
+                missing.append(f"{key!r} in {path.relative_to(_UI_DIR)}")
+
+    assert not missing, "Translator.tr() call(s) with no matching catalog key:\n" + "\n".join(missing)
