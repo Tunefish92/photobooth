@@ -612,8 +612,10 @@ def test_layout_margin_preview_renders_and_tracks_grid_size(running_app):
     _pump(1.0)
 
     settings_root = root.findChild(QQuickItem, "settingsRoot")
-    # Layout is the 7th (last) nav section; jump to it directly.
+    # Layout is the 7th (last) nav section; jump to it directly, and select
+    # the Grid sub-tab (index 1) where the preview and margin spin live.
     settings_root.setProperty("currentIndex", 6)
+    settings_root.setProperty("layoutSubIndex", 1)
     _pump(0.3)
 
     preview = root.findChild(QQuickItem, "layoutMarginPreview")
@@ -624,6 +626,48 @@ def test_layout_margin_preview_renders_and_tracks_grid_size(running_app):
     margin_spin = root.findChild(QQuickItem, "settingsMarginSpin")
     assert margin_spin is not None
     assert margin_spin.property("editable") is True
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_layout_tab_has_a_sub_tab_per_capture_mode(running_app):
+    """Regression test: the Layout section used to be one flat page of grid
+    settings; it's now split into one sub-tab per capture mode (single/grid/
+    gif/boomerang), each showing only the settings that mode uses. Confirm
+    all four sub-tab buttons exist and switching reveals mode-specific
+    fields bound to the new [burst] config (gif/boomerang shot count, frame
+    duration, frame width)."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 6)
+    _pump(0.3)
+
+    for mode in ("single", "grid", "gif", "boomerang"):
+        tab_button = root.findChild(QQuickItem, f"layoutModeTab_{mode}")
+        assert tab_button is not None, f"missing layout sub-tab for {mode!r}"
+
+    settings_root.setProperty("layoutSubIndex", 2)  # gif
+    _pump(0.3)
+    gif_spins = [
+        s for s in root.findChildren(QQuickItem)
+        if _is_instance_of(s, "SpinBox") and s.property("editable") is True and s.property("visible")
+    ]
+    assert len(gif_spins) >= 3, "expected gif_shot_count/frame_duration/frame_width spins"
+
+    settings_root.setProperty("layoutSubIndex", 3)  # boomerang
+    _pump(0.3)
+    boomerang_spins = [
+        s for s in root.findChildren(QQuickItem)
+        if _is_instance_of(s, "SpinBox") and s.property("editable") is True and s.property("visible")
+    ]
+    assert len(boomerang_spins) >= 3, "expected boomerang_shot_count/frame_duration/frame_width spins"
 
     controller.exitSettings()
     _pump(0.3)

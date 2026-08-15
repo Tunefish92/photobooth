@@ -12,6 +12,9 @@ Item {
     // breaks the item's children from attaching to the visual tree.
     property var settingsData: ({})
     property int currentIndex: 0
+    // Which per-mode sub-tab is active within the Layout section (see
+    // layoutModeTabs below): 0=single, 1=grid, 2=gif, 3=boomerang.
+    property int layoutSubIndex: 0
 
     // Mirrors of the layout fields the margin preview depends on. settingsData
     // is a plain JS object (not real QML properties), so mutating it doesn't
@@ -366,6 +369,32 @@ Item {
                                 font.pixelSize: Theme.sizeCaption
                                 color: Theme.textSecondary
                             }
+
+                            Rectangle {
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                Layout.fillWidth: true
+                                Layout.topMargin: Theme.spaceXs
+                                Layout.bottomMargin: Theme.spaceXs
+                                height: 1
+                                color: Theme.border
+                            }
+
+                            Label { text: Translator.tr("settings.field.default_filter"); color: Theme.textSecondary }
+                            WideCombo {
+                                model: ["none", "bw", "sepia", "vintage", "vivid"]
+                                currentIndex: model.indexOf(root.settingsData.effects ? root.settingsData.effects.default_filter : "none")
+                                onActivated: root.settingsData.effects.default_filter = currentText
+                            }
+                            Label { text: Translator.tr("settings.field.chroma_key"); color: Theme.textSecondary }
+                            Switch {
+                                checked: root.settingsData.effects ? root.settingsData.effects.chroma_key_enabled : false
+                                onToggled: root.settingsData.effects.chroma_key_enabled = checked
+                            }
+                            Label { text: Translator.tr("settings.field.chroma_key_path"); color: Theme.textSecondary }
+                            WideText {
+                                text: root.settingsData.effects ? root.settingsData.effects.chroma_key_background : ""
+                                onEditingFinished: root.settingsData.effects.chroma_key_background = text
+                            }
                         }
 
                         // -- Camera ---------------------------------------------------
@@ -588,171 +617,339 @@ Item {
                             }
                         }
 
-                        // -- Layout ---------------------------------------------------
-                        GridLayout {
-                            columns: root.wide ? 2 : 1
-                            columnSpacing: Theme.spaceLg
-                            rowSpacing: Theme.spaceMd
+                        // -- Layout -----------------------------------------------------
+                        // One sub-tab per capture mode, each showing only the settings
+                        // that mode actually uses. Single/Grid still share one underlying
+                        // [layout] config section (output size, margin, background,
+                        // overlay) -- editing either tab edits the same values, since a
+                        // single photo is just a 1x1 grid at capture time -- while
+                        // GIF/Boomerang each get their own independent [burst] fields.
+                        ColumnLayout {
                             width: stack.width
+                            spacing: Theme.spaceSm
 
-                            Label { text: Translator.tr("settings.field.grid_columns"); color: Theme.textSecondary }
-                            WideSpin {
-                                editable: true
-                                from: 1; to: 4
-                                value: root.settingsData.layout ? root.settingsData.layout.num_x : 2
-                                onValueModified: {
-                                    root.settingsData.layout.num_x = value
-                                    root.previewNumX = value
-                                }
-                            }
-                            Label { text: Translator.tr("settings.field.grid_rows"); color: Theme.textSecondary }
-                            WideSpin {
-                                editable: true
-                                from: 1; to: 4
-                                value: root.settingsData.layout ? root.settingsData.layout.num_y : 2
-                                onValueModified: {
-                                    root.settingsData.layout.num_y = value
-                                    root.previewNumY = value
-                                }
-                            }
-                            Label { text: Translator.tr("settings.field.output_width"); color: Theme.textSecondary }
-                            WideSpin {
-                                editable: true
-                                from: 600; to: 8000
-                                value: root.settingsData.layout ? root.settingsData.layout.size_x : 3496
-                                onValueModified: {
-                                    root.settingsData.layout.size_x = value
-                                    root.previewSizeX = value
-                                }
-                            }
-                            Label { text: Translator.tr("settings.field.output_height"); color: Theme.textSecondary }
-                            WideSpin {
-                                editable: true
-                                from: 600; to: 8000
-                                value: root.settingsData.layout ? root.settingsData.layout.size_y : 2362
-                                onValueModified: {
-                                    root.settingsData.layout.size_y = value
-                                    root.previewSizeY = value
-                                }
-                            }
-                            Label { text: Translator.tr("settings.field.margin"); color: Theme.textSecondary }
-                            WideSpin {
-                                objectName: "settingsMarginSpin"
-                                editable: true
-                                from: 0; to: 400
-                                value: root.settingsData.layout ? root.settingsData.layout.inner_dist_x : 40
-                                onValueModified: {
-                                    root.settingsData.layout.inner_dist_x = value
-                                    root.settingsData.layout.inner_dist_y = value
-                                    root.settingsData.layout.outer_dist_x = value
-                                    root.settingsData.layout.outer_dist_y = value
-                                    root.previewMargin = value
-                                }
-                            }
-
-                            // -- margin preview: paper rectangle with a
-                            // num_x*num_y grid of unstretched photo rectangles,
-                            // spaced by margin as a proportion of paper size.
-                            Item {
-                                id: layoutPreview
-                                objectName: "layoutMarginPreview"
-                                Layout.columnSpan: root.wide ? 2 : 1
+                            RowLayout {
                                 Layout.fillWidth: true
-                                // Paper rect height (up to maxPaperHeight) plus the
-                                // caption below it plus breathing room on both ends --
-                                // previously the paper rect could claim the *entire*
-                                // preferredHeight, leaving the caption with nowhere to
-                                // go but overlap the field above/below it.
-                                Layout.preferredHeight: 200 + captionReserve + Theme.spaceSm
-                                Layout.topMargin: Theme.spaceSm
-                                Layout.bottomMargin: Theme.spaceXs
+                                spacing: Theme.spaceXs
 
-                                readonly property real captionReserve: Theme.sizeCaption + Theme.spaceXs + 6
-                                readonly property real maxPaperHeight: Math.max(40, height - captionReserve)
-                                readonly property real fotoAspect: 3 / 2
-                                readonly property real paperAspect: root.previewSizeY > 0 ? root.previewSizeX / root.previewSizeY : 1.5
-                                readonly property real fitWidth: Math.min(width, maxPaperHeight * paperAspect)
-                                readonly property real fitHeight: fitWidth / paperAspect
+                                LayoutModeTabButton {
+                                    objectName: "layoutModeTab_single"
+                                    mode: "single"
+                                    selected: root.layoutSubIndex === 0
+                                    onActivated: root.layoutSubIndex = 0
+                                }
+                                LayoutModeTabButton {
+                                    objectName: "layoutModeTab_grid"
+                                    mode: "grid"
+                                    selected: root.layoutSubIndex === 1
+                                    onActivated: root.layoutSubIndex = 1
+                                }
+                                LayoutModeTabButton {
+                                    objectName: "layoutModeTab_gif"
+                                    mode: "gif"
+                                    selected: root.layoutSubIndex === 2
+                                    onActivated: root.layoutSubIndex = 2
+                                }
+                                LayoutModeTabButton {
+                                    objectName: "layoutModeTab_boomerang"
+                                    mode: "boomerang"
+                                    selected: root.layoutSubIndex === 3
+                                    onActivated: root.layoutSubIndex = 3
+                                }
+                            }
 
-                                Rectangle {
-                                    id: paperRect
-                                    width: layoutPreview.fitWidth
-                                    height: layoutPreview.fitHeight
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.top: parent.top
-                                    color: Theme.bgElevated
-                                    border.width: 1
-                                    border.color: Theme.border
-                                    radius: Theme.radiusSm
+                            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
 
-                                    readonly property real marginPreview: Math.max(2, Math.min(
-                                        width * (root.previewMargin / Math.max(root.previewSizeX, 1)),
-                                        Math.min(width, height) * 0.16
-                                    ))
+                            StackLayout {
+                                id: layoutSubStack
+                                Layout.fillWidth: true
+                                currentIndex: root.layoutSubIndex
 
-                                    Grid {
-                                        id: photoGrid
-                                        anchors.centerIn: parent
-                                        columns: Math.max(1, root.previewNumX)
-                                        rows: Math.max(1, root.previewNumY)
-                                        spacing: paperRect.marginPreview
-                                        readonly property real cellW: (paperRect.width - 2 * paperRect.marginPreview - (columns - 1) * spacing) / columns
-                                        readonly property real cellH: (paperRect.height - 2 * paperRect.marginPreview - (rows - 1) * spacing) / rows
+                                // -- Single ---------------------------------------------
+                                GridLayout {
+                                    columns: root.wide ? 2 : 1
+                                    columnSpacing: Theme.spaceLg
+                                    rowSpacing: Theme.spaceMd
+                                    width: layoutSubStack.width
 
-                                        Repeater {
-                                            model: root.previewNumX * root.previewNumY
-                                            delegate: Item {
-                                                width: Math.max(1, photoGrid.cellW)
-                                                height: Math.max(1, photoGrid.cellH)
-                                                Rectangle {
-                                                    anchors.centerIn: parent
-                                                    width: Math.min(parent.width, parent.height * layoutPreview.fotoAspect)
-                                                    height: width / layoutPreview.fotoAspect
-                                                    radius: 2
-                                                    color: Theme.accentA
-                                                    opacity: 0.35
-                                                }
-                                            }
+                                    Text {
+                                        Layout.columnSpan: root.wide ? 2 : 1
+                                        Layout.bottomMargin: Theme.spaceXs
+                                        text: Translator.tr("settings.layout_shared_hint")
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.sizeCaption
+                                        color: Theme.textSecondary
+                                    }
+
+                                    Label { text: Translator.tr("settings.field.output_width"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 600; to: 8000
+                                        value: root.settingsData.layout ? root.settingsData.layout.size_x : 3496
+                                        onValueModified: {
+                                            root.settingsData.layout.size_x = value
+                                            root.previewSizeX = value
                                         }
+                                    }
+                                    Label { text: Translator.tr("settings.field.output_height"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 600; to: 8000
+                                        value: root.settingsData.layout ? root.settingsData.layout.size_y : 2362
+                                        onValueModified: {
+                                            root.settingsData.layout.size_y = value
+                                            root.previewSizeY = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.margin"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 0; to: 400
+                                        value: root.settingsData.layout ? root.settingsData.layout.inner_dist_x : 40
+                                        onValueModified: {
+                                            root.settingsData.layout.inner_dist_x = value
+                                            root.settingsData.layout.inner_dist_y = value
+                                            root.settingsData.layout.outer_dist_x = value
+                                            root.settingsData.layout.outer_dist_y = value
+                                            root.previewMargin = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.background_path"); color: Theme.textSecondary }
+                                    WideText {
+                                        text: root.settingsData.layout ? root.settingsData.layout.background : ""
+                                        onEditingFinished: root.settingsData.layout.background = text
+                                    }
+                                    Label { text: Translator.tr("settings.field.overlay_path"); color: Theme.textSecondary }
+                                    WideText {
+                                        text: root.settingsData.layout ? root.settingsData.layout.overlay : ""
+                                        onEditingFinished: root.settingsData.layout.overlay = text
                                     }
                                 }
 
-                                Text {
-                                    anchors.top: paperRect.bottom
-                                    anchors.topMargin: Theme.spaceXs
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: Translator.tr("settings.field.margin_preview_hint")
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: Theme.sizeCaption
-                                    color: Theme.textSecondary
-                                }
-                            }
+                                // -- Grid -------------------------------------------------
+                                GridLayout {
+                                    columns: root.wide ? 2 : 1
+                                    columnSpacing: Theme.spaceLg
+                                    rowSpacing: Theme.spaceMd
+                                    width: layoutSubStack.width
 
-                            Label { text: Translator.tr("settings.field.background_path"); color: Theme.textSecondary }
-                            WideText {
-                                text: root.settingsData.layout ? root.settingsData.layout.background : ""
-                                onEditingFinished: root.settingsData.layout.background = text
-                            }
-                            Label { text: Translator.tr("settings.field.overlay_path"); color: Theme.textSecondary }
-                            WideText {
-                                text: root.settingsData.layout ? root.settingsData.layout.overlay : ""
-                                onEditingFinished: root.settingsData.layout.overlay = text
-                            }
-                            Label { text: Translator.tr("settings.field.default_filter"); color: Theme.textSecondary }
-                            WideCombo {
-                                model: ["none", "bw", "sepia", "vintage", "vivid"]
-                                currentIndex: model.indexOf(root.settingsData.effects ? root.settingsData.effects.default_filter : "none")
-                                onActivated: root.settingsData.effects.default_filter = currentText
-                            }
-                            Label { text: Translator.tr("settings.field.chroma_key"); color: Theme.textSecondary }
-                            Switch {
-                                checked: root.settingsData.effects ? root.settingsData.effects.chroma_key_enabled : false
-                                onToggled: root.settingsData.effects.chroma_key_enabled = checked
-                            }
-                            Label { text: Translator.tr("settings.field.chroma_key_path"); color: Theme.textSecondary }
-                            WideText {
-                                text: root.settingsData.effects ? root.settingsData.effects.chroma_key_background : ""
-                                onEditingFinished: root.settingsData.effects.chroma_key_background = text
+                                    Text {
+                                        Layout.columnSpan: root.wide ? 2 : 1
+                                        Layout.bottomMargin: Theme.spaceXs
+                                        text: Translator.tr("settings.layout_shared_hint")
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.sizeCaption
+                                        color: Theme.textSecondary
+                                    }
+
+                                    Label { text: Translator.tr("settings.field.grid_columns"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 1; to: 4
+                                        value: root.settingsData.layout ? root.settingsData.layout.num_x : 2
+                                        onValueModified: {
+                                            root.settingsData.layout.num_x = value
+                                            root.previewNumX = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.grid_rows"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 1; to: 4
+                                        value: root.settingsData.layout ? root.settingsData.layout.num_y : 2
+                                        onValueModified: {
+                                            root.settingsData.layout.num_y = value
+                                            root.previewNumY = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.output_width"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 600; to: 8000
+                                        value: root.settingsData.layout ? root.settingsData.layout.size_x : 3496
+                                        onValueModified: {
+                                            root.settingsData.layout.size_x = value
+                                            root.previewSizeX = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.output_height"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 600; to: 8000
+                                        value: root.settingsData.layout ? root.settingsData.layout.size_y : 2362
+                                        onValueModified: {
+                                            root.settingsData.layout.size_y = value
+                                            root.previewSizeY = value
+                                        }
+                                    }
+                                    Label { text: Translator.tr("settings.field.margin"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        objectName: "settingsMarginSpin"
+                                        editable: true
+                                        from: 0; to: 400
+                                        value: root.settingsData.layout ? root.settingsData.layout.inner_dist_x : 40
+                                        onValueModified: {
+                                            root.settingsData.layout.inner_dist_x = value
+                                            root.settingsData.layout.inner_dist_y = value
+                                            root.settingsData.layout.outer_dist_x = value
+                                            root.settingsData.layout.outer_dist_y = value
+                                            root.previewMargin = value
+                                        }
+                                    }
+
+                                    // -- margin preview: paper rectangle with a
+                                    // num_x*num_y grid of unstretched photo rectangles,
+                                    // spaced by margin as a proportion of paper size.
+                                    Item {
+                                        id: layoutPreview
+                                        objectName: "layoutMarginPreview"
+                                        Layout.columnSpan: root.wide ? 2 : 1
+                                        Layout.fillWidth: true
+                                        // Paper rect height (up to maxPaperHeight) plus the
+                                        // caption below it plus breathing room on both ends --
+                                        // previously the paper rect could claim the *entire*
+                                        // preferredHeight, leaving the caption with nowhere to
+                                        // go but overlap the field above/below it.
+                                        Layout.preferredHeight: 200 + captionReserve + Theme.spaceSm
+                                        Layout.topMargin: Theme.spaceSm
+                                        Layout.bottomMargin: Theme.spaceXs
+
+                                        readonly property real captionReserve: Theme.sizeCaption + Theme.spaceXs + 6
+                                        readonly property real maxPaperHeight: Math.max(40, height - captionReserve)
+                                        readonly property real fotoAspect: 3 / 2
+                                        readonly property real paperAspect: root.previewSizeY > 0 ? root.previewSizeX / root.previewSizeY : 1.5
+                                        readonly property real fitWidth: Math.min(width, maxPaperHeight * paperAspect)
+                                        readonly property real fitHeight: fitWidth / paperAspect
+
+                                        Rectangle {
+                                            id: paperRect
+                                            width: layoutPreview.fitWidth
+                                            height: layoutPreview.fitHeight
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            anchors.top: parent.top
+                                            color: Theme.bgElevated
+                                            border.width: 1
+                                            border.color: Theme.border
+                                            radius: Theme.radiusSm
+
+                                            readonly property real marginPreview: Math.max(2, Math.min(
+                                                width * (root.previewMargin / Math.max(root.previewSizeX, 1)),
+                                                Math.min(width, height) * 0.16
+                                            ))
+
+                                            Grid {
+                                                id: photoGrid
+                                                anchors.centerIn: parent
+                                                columns: Math.max(1, root.previewNumX)
+                                                rows: Math.max(1, root.previewNumY)
+                                                spacing: paperRect.marginPreview
+                                                readonly property real cellW: (paperRect.width - 2 * paperRect.marginPreview - (columns - 1) * spacing) / columns
+                                                readonly property real cellH: (paperRect.height - 2 * paperRect.marginPreview - (rows - 1) * spacing) / rows
+
+                                                Repeater {
+                                                    model: root.previewNumX * root.previewNumY
+                                                    delegate: Item {
+                                                        width: Math.max(1, photoGrid.cellW)
+                                                        height: Math.max(1, photoGrid.cellH)
+                                                        Rectangle {
+                                                            anchors.centerIn: parent
+                                                            width: Math.min(parent.width, parent.height * layoutPreview.fotoAspect)
+                                                            height: width / layoutPreview.fotoAspect
+                                                            radius: 2
+                                                            color: Theme.accentA
+                                                            opacity: 0.35
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.top: paperRect.bottom
+                                            anchors.topMargin: Theme.spaceXs
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            text: Translator.tr("settings.field.margin_preview_hint")
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: Theme.sizeCaption
+                                            color: Theme.textSecondary
+                                        }
+                                    }
+
+                                    Label { text: Translator.tr("settings.field.background_path"); color: Theme.textSecondary }
+                                    WideText {
+                                        text: root.settingsData.layout ? root.settingsData.layout.background : ""
+                                        onEditingFinished: root.settingsData.layout.background = text
+                                    }
+                                    Label { text: Translator.tr("settings.field.overlay_path"); color: Theme.textSecondary }
+                                    WideText {
+                                        text: root.settingsData.layout ? root.settingsData.layout.overlay : ""
+                                        onEditingFinished: root.settingsData.layout.overlay = text
+                                    }
+                                }
+
+                                // -- GIF --------------------------------------------------
+                                GridLayout {
+                                    columns: root.wide ? 2 : 1
+                                    columnSpacing: Theme.spaceLg
+                                    rowSpacing: Theme.spaceMd
+                                    width: layoutSubStack.width
+
+                                    Label { text: Translator.tr("settings.field.gif_shot_count"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 2; to: 30
+                                        value: root.settingsData.burst ? root.settingsData.burst.gif_shot_count : 6
+                                        onValueModified: root.settingsData.burst.gif_shot_count = value
+                                    }
+                                    Label { text: Translator.tr("settings.field.gif_frame_duration"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 20; to: 2000
+                                        value: root.settingsData.burst ? root.settingsData.burst.gif_frame_duration_ms : 150
+                                        onValueModified: root.settingsData.burst.gif_frame_duration_ms = value
+                                    }
+                                    Label { text: Translator.tr("settings.field.gif_frame_width"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 200; to: 4000
+                                        value: root.settingsData.burst ? root.settingsData.burst.gif_frame_max_width_px : 900
+                                        onValueModified: root.settingsData.burst.gif_frame_max_width_px = value
+                                    }
+                                }
+
+                                // -- Boomerang ----------------------------------------------
+                                GridLayout {
+                                    columns: root.wide ? 2 : 1
+                                    columnSpacing: Theme.spaceLg
+                                    rowSpacing: Theme.spaceMd
+                                    width: layoutSubStack.width
+
+                                    Label { text: Translator.tr("settings.field.boomerang_shot_count"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 2; to: 30
+                                        value: root.settingsData.burst ? root.settingsData.burst.boomerang_shot_count : 12
+                                        onValueModified: root.settingsData.burst.boomerang_shot_count = value
+                                    }
+                                    Label { text: Translator.tr("settings.field.boomerang_frame_duration"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 20; to: 2000
+                                        value: root.settingsData.burst ? root.settingsData.burst.boomerang_frame_duration_ms : 80
+                                        onValueModified: root.settingsData.burst.boomerang_frame_duration_ms = value
+                                    }
+                                    Label { text: Translator.tr("settings.field.boomerang_frame_width"); color: Theme.textSecondary }
+                                    WideSpin {
+                                        editable: true
+                                        from: 200; to: 4000
+                                        value: root.settingsData.burst ? root.settingsData.burst.boomerang_frame_max_width_px : 900
+                                        onValueModified: root.settingsData.burst.boomerang_frame_max_width_px = value
+                                    }
+                                }
                             }
                         }
 

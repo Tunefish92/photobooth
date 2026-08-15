@@ -41,9 +41,6 @@ from photobooth.storage import PhotoDatabase, SessionStore
 
 logger = logging.getLogger(__name__)
 
-_BURST_FRAME_MAX_WIDTH = 900  # gif/boomerang frames are for screens, not print
-
-
 def _optional_path(value: str) -> Path | None:
     return Path(value) if value else None
 
@@ -293,8 +290,13 @@ class AppController(QObject):
                     ]
 
             if session.mode in ("gif", "boomerang"):
-                frames = [_shrink(img, _BURST_FRAME_MAX_WIDTH) for img in images]
-                data = make_boomerang(frames) if session.mode == "boomerang" else make_gif(frames)
+                burst = self._settings.burst
+                if session.mode == "boomerang":
+                    frames = [_shrink(img, burst.boomerang_frame_max_width_px) for img in images]
+                    data = make_boomerang(frames, burst.boomerang_frame_duration_ms)
+                else:
+                    frames = [_shrink(img, burst.gif_frame_max_width_px) for img in images]
+                    data = make_gif(frames, burst.gif_frame_duration_ms)
                 extension = "gif"
             else:
                 layout = self._settings.layout
@@ -469,7 +471,10 @@ class AppController(QObject):
         if self._sm.state != State.IDLE:
             return
         layout = self._settings.layout
-        count = shot_count_for_mode(mode, layout.num_x, layout.num_y)
+        burst = self._settings.burst
+        count = shot_count_for_mode(
+            mode, layout.num_x, layout.num_y, burst.gif_shot_count, burst.boomerang_shot_count
+        )
         session = CaptureSession(mode=mode, target_shot_count=count, filter_name=filter_name)
         self._sm.trigger(session)
 

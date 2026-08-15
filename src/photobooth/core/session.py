@@ -9,14 +9,6 @@ from pathlib import Path
 
 from photobooth.config.settings import CaptureMode, FilterName
 
-# Shot counts for the "burst" modes; "grid" instead derives its count from
-# the configured layout.num_x * layout.num_y (whatever grid shape is set up).
-FIXED_SHOT_COUNTS: dict[str, int] = {
-    "single": 1,
-    "gif": 6,
-    "boomerang": 12,
-}
-
 
 @dataclass(slots=True)
 class CaptureSession:
@@ -44,7 +36,13 @@ class CaptureSession:
         self.result_path = None
 
 
-def shot_count_for_mode(mode: CaptureMode, num_x: int, num_y: int) -> int:
+def shot_count_for_mode(
+    mode: CaptureMode, num_x: int, num_y: int, gif_shot_count: int, boomerang_shot_count: int
+) -> int:
     if mode == "grid":
         return max(1, num_x * num_y)
-    return FIXED_SHOT_COUNTS[mode]
+    if mode == "gif":
+        return gif_shot_count
+    if mode == "boomerang":
+        return boomerang_shot_count
+    return 1  # single
