@@ -18,9 +18,14 @@ Canvas {
         var cy = height * 0.56
         var r = width * 0.28
 
-        // Ring with a gap at the top for the line to pass through
+        // Ring with a gap at the top for the line to pass through. Canvas
+        // angles increase clockwise from the positive x-axis, so a gap
+        // centered on the top (-90deg / -0.5pi) runs from -0.7pi to -0.3pi
+        // -- the arc is drawn over the *other* ~288 degrees, from -0.3pi
+        // clockwise around to 1.3pi (previously this went -0.65pi to
+        // 0.65pi, which put the gap on the left instead of the top).
         ctx.beginPath()
-        ctx.arc(cx, cy, r, -Math.PI * 0.65, Math.PI * 0.65, false)
+        ctx.arc(cx, cy, r, -Math.PI * 0.3, Math.PI * 1.3, false)
         ctx.stroke()
 
         // Vertical line piercing the gap

@@ -13,6 +13,7 @@ Button {
     // GearIcon.qml), which is centered by construction.
     property bool vectorGear: false
     property bool vectorPower: false
+    property bool vectorClose: false
     implicitWidth: 60
     implicitHeight: 60
 
@@ -36,8 +37,15 @@ Button {
             height: 26
             color: Theme.textPrimary
         }
+        CloseIcon {
+            visible: root.vectorClose
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            color: Theme.textPrimary
+        }
         Text {
-            visible: !root.vectorGear && !root.vectorPower
+            visible: !root.vectorGear && !root.vectorPower && !root.vectorClose
             text: root.glyph
             color: Theme.textPrimary
             font.pixelSize: 26

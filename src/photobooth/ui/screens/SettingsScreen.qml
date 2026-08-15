@@ -108,7 +108,7 @@ Item {
         anchors.right: parent.right
         anchors.margins: Theme.spaceLg
         z: 10
-        glyph: "✕"
+        vectorClose: true
         onClicked: App.exitSettings()
     }
 

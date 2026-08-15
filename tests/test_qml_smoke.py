@@ -338,6 +338,27 @@ def test_exit_button_uses_the_vector_power_icon(running_app):
     assert exit_button.property("vectorPower") is True
 
 
+def test_settings_close_button_uses_the_vector_close_icon(running_app):
+    """Regression test: the "✕" MULTIPLICATION X Unicode glyph isn't
+    reliably covered by fonts on a minimal kiosk install (renders as a
+    blank box), so the Settings screen's close button now draws a small
+    vector X instead (CloseIcon.qml). Confirm the button opted into that
+    mode."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    close_button = root.findChild(QQuickItem, "settingsCloseButton")
+    assert close_button is not None
+    assert close_button.property("vectorClose") is True
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
 def test_photo_modes_tab_has_a_switch_per_mode_all_enabled_by_default(running_app):
     """Regression test for the Photo Modes tab: one Switch per capture mode
     (single/grid/gif/boomerang), all on by default (matching
