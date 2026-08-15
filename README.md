@@ -4,6 +4,8 @@ A modern, native photobooth application for Raspberry Pi 4 (4GB). Built with
 Python 3.11+ and PySide6/Qt Quick — no browser, no Electron, GPU-composited
 UI that autostarts full-screen on top of the desktop.
 
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 <p align="center">
   <center><img src="docs/screenshots/idle.png" alt="Main idle screen" width="100%"></center>
 </p>
