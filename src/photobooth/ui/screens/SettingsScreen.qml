@@ -576,42 +576,42 @@ Item {
                             Label { text: Translator.tr("settings.field.trigger_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.trigger_pin : 23
                                 onValueModified: root.settingsData.gpio.trigger_pin = value
                             }
                             Label { text: Translator.tr("settings.field.exit_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.exit_pin : 24
                                 onValueModified: root.settingsData.gpio.exit_pin = value
                             }
                             Label { text: Translator.tr("settings.field.lamp_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.lamp_pin : 4
                                 onValueModified: root.settingsData.gpio.lamp_pin = value
                             }
                             Label { text: Translator.tr("settings.field.rgb_red_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.chan_r_pin : 27
                                 onValueModified: root.settingsData.gpio.chan_r_pin = value
                             }
                             Label { text: Translator.tr("settings.field.rgb_green_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.chan_g_pin : 22
                                 onValueModified: root.settingsData.gpio.chan_g_pin = value
                             }
                             Label { text: Translator.tr("settings.field.rgb_blue_pin"); color: Theme.textSecondary }
                             WideSpin {
                                 editable: true
-                                from: 0; to: 27
+                                from: 2; to: 27
                                 value: root.settingsData.gpio ? root.settingsData.gpio.chan_b_pin : 17
                                 onValueModified: root.settingsData.gpio.chan_b_pin = value
                             }

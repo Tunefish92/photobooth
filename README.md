@@ -38,7 +38,9 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   debug fallback
 - Email, WebDAV upload, and USB export sharing
 - GPIO support for a physical trigger button, exit button, lamp, and RGB
-  LED ring
+  LED ring (BCM pin numbering, validated to the 40-pin header's usable
+  GPIO2-GPIO27 range with no two roles sharing a pin -- see
+  `src/photobooth/hardware/gpio.py` for wiring notes)
 - In-app, PIN-gated settings covering every option above, plus an
   on-screen exit-with-confirmation button
 - English/German UI

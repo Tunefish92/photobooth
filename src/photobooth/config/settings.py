@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import tomlkit
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 CameraBackendName = Literal["auto", "gphoto2", "picamera2", "opencv", "dummy"]
 PrinterBackendName = Literal["cups", "pdf"]
@@ -41,13 +41,41 @@ class CameraConfig(BaseModel):
 
 
 class GpioConfig(BaseModel):
+    # BCM numbering, 2-27: the range actually broken out on the 40-pin
+    # header. GPIO0/1 are excluded even though they're physically present
+    # (as ID_SD/ID_SC) -- they're reserved for HAT EEPROM identification at
+    # boot and shouldn't be repurposed for general I/O.
     enable: bool = False
-    exit_pin: int = 24
-    trigger_pin: int = 23
-    lamp_pin: int = 4
-    chan_r_pin: int = 27
-    chan_g_pin: int = 22
-    chan_b_pin: int = 17
+    exit_pin: int = Field(default=24, ge=2, le=27)
+    trigger_pin: int = Field(default=23, ge=2, le=27)
+    lamp_pin: int = Field(default=4, ge=2, le=27)
+    chan_r_pin: int = Field(default=27, ge=2, le=27)
+    chan_g_pin: int = Field(default=22, ge=2, le=27)
+    chan_b_pin: int = Field(default=17, ge=2, le=27)
+
+    @model_validator(mode="after")
+    def _pins_must_be_distinct(self) -> "GpioConfig":
+        # gpiozero raises GPIOPinInUse the moment a second role tries to
+        # claim an already-reserved pin -- caught by the broad except in
+        # GpioController._init_hardware() and logged, but that leaves every
+        # GPIO feature (trigger, exit, lamp, RGB) silently dead with no
+        # indication in the UI of why. Catch the misconfiguration here
+        # instead, at the config boundary, with a message that actually
+        # says what's wrong.
+        pins = {
+            "exit_pin": self.exit_pin,
+            "trigger_pin": self.trigger_pin,
+            "lamp_pin": self.lamp_pin,
+            "chan_r_pin": self.chan_r_pin,
+            "chan_g_pin": self.chan_g_pin,
+            "chan_b_pin": self.chan_b_pin,
+        }
+        seen: dict[int, str] = {}
+        for name, pin in pins.items():
+            if pin in seen:
+                raise ValueError(f"{name} and {seen[pin]} can't both use GPIO{pin}")
+            seen[pin] = name
+        return self
 
 
 class PrinterConfig(BaseModel):
