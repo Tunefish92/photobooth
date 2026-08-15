@@ -80,7 +80,10 @@ the real hardware.
    ```powershell
    uv run photobooth
    ```
-   It launches windowed by default on non-Linux platforms. To force a
+   or double-click [`scripts/run-windows.bat`](scripts/run-windows.bat), which
+   does the same thing regardless of your current directory and pauses on
+   an error so the window doesn't just vanish. It launches windowed by
+   default on non-Linux platforms. To force a
    specific window size or fullscreen for a quick look at the kiosk layout,
    edit `app.fullscreen`/`app.width`/`app.height` in the user config (see
    [Configuration](#configuration)) — no need to touch the defaults file.
