@@ -17,30 +17,40 @@ Canvas {
         var cy = height / 2
         var r = width * 0.30
         var lineWidth = width * 0.11
-        var startAngle = -Math.PI * 0.85
-        var endAngle = Math.PI * 0.65
+
+        // Ring with a gap at the bottom (90deg, since Canvas angles
+        // increase clockwise from the positive x-axis): arc runs from just
+        // past the gap clockwise all the way around to just before it.
+        var gapHalf = Math.PI * 0.22
+        var startAngle = Math.PI * 0.5 + gapHalf
+        var endAngle = Math.PI * 0.5 - gapHalf + Math.PI * 2
 
         ctx.lineWidth = lineWidth
         ctx.beginPath()
         ctx.arc(cx, cy, r, startAngle, endAngle, false)
         ctx.stroke()
 
-        // Arrowhead at the arc's leading end
-        var tipAngle = endAngle
-        var tipX = cx + r * Math.cos(tipAngle)
-        var tipY = cy + r * Math.sin(tipAngle)
-        var tangent = tipAngle + Math.PI / 2
-        var headLen = width * 0.20
-        var headSpread = width * 0.13
-
-        var backX = tipX - headLen * Math.cos(tangent)
-        var backY = tipY - headLen * Math.sin(tangent)
+        // Arrowhead based at the arc's trailing end, tip extending further
+        // along the direction of travel (tangent = endAngle + 90deg for a
+        // clockwise sweep) -- shows the loop's rotation direction.
+        var endX = cx + r * Math.cos(endAngle)
+        var endY = cy + r * Math.sin(endAngle)
+        var tangent = endAngle + Math.PI / 2
         var normal = tangent + Math.PI / 2
+        var headLen = width * 0.24
+        var headSpread = width * 0.14
+
+        var tipX = endX + headLen * Math.cos(tangent)
+        var tipY = endY + headLen * Math.sin(tangent)
+        var leftX = endX + headSpread * Math.cos(normal)
+        var leftY = endY + headSpread * Math.sin(normal)
+        var rightX = endX - headSpread * Math.cos(normal)
+        var rightY = endY - headSpread * Math.sin(normal)
 
         ctx.beginPath()
-        ctx.moveTo(tipX + headSpread * Math.cos(tipAngle), tipY + headSpread * Math.sin(tipAngle))
-        ctx.lineTo(backX + headSpread * Math.cos(normal), backY + headSpread * Math.sin(normal))
-        ctx.lineTo(backX - headSpread * Math.cos(normal), backY - headSpread * Math.sin(normal))
+        ctx.moveTo(tipX, tipY)
+        ctx.lineTo(leftX, leftY)
+        ctx.lineTo(rightX, rightY)
         ctx.closePath()
         ctx.fill()
     }
