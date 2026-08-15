@@ -610,6 +610,10 @@ class AppController(QObject):
     def defaultFilter(self) -> str:
         return self._settings.effects.default_filter
 
+    @Property(str, notify=configChanged)
+    def theme(self) -> str:
+        return self._settings.app.theme
+
     @Property(bool, notify=configChanged)
     def printerEnabled(self) -> bool:
         return self._settings.printer.enable

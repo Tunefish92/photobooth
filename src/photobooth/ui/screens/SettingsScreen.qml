@@ -302,7 +302,8 @@ Item {
 
                             Label { text: Translator.tr("settings.field.theme"); color: Theme.textSecondary }
                             WideCombo {
-                                model: ["aurora-dark", "aurora-light"]
+                                objectName: "settingsThemeCombo"
+                                model: ["aurora-dark", "aurora-light", "ocean-blue", "forest-green", "prism-modern"]
                                 currentIndex: model.indexOf(root.settingsData.app ? root.settingsData.app.theme : "aurora-dark")
                                 onActivated: root.settingsData.app.theme = currentText
                             }

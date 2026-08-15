@@ -13,8 +13,13 @@ Window {
     color: Theme.bg
     title: "Photobooth"
 
+    // Keeps the singleton's active palette in sync with the persisted
+    // setting -- a plain binding rather than a one-time assignment in
+    // onCompleted, so it also picks up the new value's notify signal if
+    // the theme is changed and saved in Settings without restarting.
+    Binding { target: Theme; property: "name"; value: App.theme }
+
     Component.onCompleted: {
-        Theme.dark = true
         screenLoader.sourceComponent = screenForState(App.state)
     }
 

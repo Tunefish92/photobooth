@@ -35,16 +35,60 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   repeat, power) with hand-drawn vector icons. The emoji glyphs rendered as
   blank boxes on a minimal Pi desktop install with no emoji-capable font --
   the same class of problem already solved for the settings gear icon.
+  Also fixed a geometry bug in the boomerang/power icons themselves (a
+  Canvas arc-angle mixup put the ring's gap on the wrong side of the
+  circle, rendering as a broken hook instead of a clean loop/power shape),
+  and converted the Settings close button's "✕" glyph the same way.
 - Settings -> Layout is now one tab per capture mode (Photo/Grid/GIF/
   Boomerang) instead of a single flat page of grid-specific fields. Photo
   and Grid still share the underlying output size/margin/background/
   overlay config; GIF and Boomerang gained new settings (shot count, frame
   duration, frame width) that were previously hardcoded and not
   configurable at all.
+- **Themes actually work now.** The Settings -> General theme picker had
+  no effect at all -- `main.qml` hardcoded `Theme.dark = true` at startup
+  and never read the saved `app.theme`. Fixed, and expanded from the two
+  Aurora (dark/light) variants to five: Aurora Dark, Aurora Light, Ocean
+  Blue, Forest Green, and Prism Modern (a bold, saturated magenta/violet/
+  cyan look, in contrast to the other themes' restrained pastel accents).
+  Takes effect on Save, same as the language setting.
+
+### GPIO
+
+- Hardened `GpioConfig` against two previously-silent misconfigurations:
+  pins outside the 40-pin header's usable BCM2-27 range (0/1 are reserved
+  for HAT EEPROM ID) and two roles sharing the same pin (`gpiozero` raises
+  `GPIOPinInUse` the instant a second device claims an already-reserved
+  pin, which the broad exception handler around hardware init swallowed,
+  silently disabling every GPIO feature with nothing but a log line
+  explaining why). Both are now rejected at the config boundary. Also
+  added button debounce (a mechanical button without it can fire multiple
+  press events per physical press).
+
+### Sharing
+
+- Fixed email sending on SMTP servers that use implicit TLS (port 465,
+  as opposed to the far more common port 587 STARTTLS): the mailer always
+  used plain `SMTP` + `starttls()`, which sends a plaintext `EHLO` into a
+  TLS handshake and fails on port 465. Now uses `SMTP_SSL` for that case.
+- Audited USB export's Pi auto-mount assumptions (`/media/<user>/<label>`
+  and `/run/media/<user>/<label>`, covering both older and newer `udisks2`
+  conventions) and WebDAV's request handling -- both already correct, no
+  changes needed there.
 
 ### Dev tooling
 
 - Added `scripts/run-windows.bat` for a one-click local dev run on Windows.
+
+### Tests
+
+- Added coverage that didn't exist before: the email and WebDAV sharing
+  backends (mocked `smtplib`/`httpx`, no live server needed), GPIO pin
+  range/uniqueness validation, the theme system end-to-end (selecting and
+  saving a theme actually changes the live `Theme` singleton), and a
+  catalog-wide sweep confirming every `Translator.tr()` call site across
+  every `.qml` file resolves in both languages (not just Settings screen
+  fields, which was the only thing previously checked).
 
 ## [0.1.0] - 2026-08-12 (Beta)
 

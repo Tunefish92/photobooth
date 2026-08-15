@@ -4,29 +4,78 @@ import QtQuick
 QtObject {
     id: theme
 
-    // Toggle drives every color below; set from Settings ("aurora-dark" / "aurora-light")
-    property bool dark: true
+    // Selects one of _palettes below; set from Settings (app.theme).
+    // Falls back to "aurora-dark" for an unknown/missing name so a typo'd
+    // config value degrades gracefully instead of breaking every binding
+    // that reads a Theme.* color.
+    property string name: "aurora-dark"
+    readonly property var _palette: _palettes[name] || _palettes["aurora-dark"]
 
-    // -- palette --------------------------------------------------------
-    // Quiet neutral base with a single soft accent hue, used sparingly --
-    // an "elegant, light-accent" system rather than saturated neon.
-    readonly property color bg: dark ? "#101218" : "#f8f8fb"
-    readonly property color bgElevated: dark ? "#171a22" : "#ffffff"
-    readonly property color bgGlass: dark ? "#1b1f29" : "#ffffff"
-    readonly property color border: dark ? "#262b36" : "#e7e8ee"
+    // True for every theme except the light aurora variant -- drives a
+    // couple of non-color tweaks elsewhere (main.qml's background blob
+    // opacity) that only make sense as a light/dark binary.
+    readonly property bool dark: _palette.dark
 
-    readonly property color textPrimary: dark ? "#f3f4f7" : "#1b1d24"
-    readonly property color textSecondary: dark ? "#8d92a3" : "#6b6f80"
-    readonly property color textOnAccent: "#ffffff"
+    readonly property var _palettes: ({
+        "aurora-dark": {
+            dark: true,
+            bg: "#101218", bgElevated: "#171a22", bgGlass: "#1b1f29", border: "#262b36",
+            textPrimary: "#f3f4f7", textSecondary: "#8d92a3", textOnAccent: "#ffffff",
+            accentA: "#a5b0fc", accentB: "#f5b8cf", accentC: "#9fe6d2",
+            success: "#7fdcae", danger: "#f3a0a6", warning: "#f2cf8c"
+        },
+        "aurora-light": {
+            dark: false,
+            bg: "#f8f8fb", bgElevated: "#ffffff", bgGlass: "#ffffff", border: "#e7e8ee",
+            textPrimary: "#1b1d24", textSecondary: "#6b6f80", textOnAccent: "#ffffff",
+            accentA: "#6a74e0", accentB: "#d9679c", accentC: "#2fa583",
+            success: "#2f9e6f", danger: "#d5555f", warning: "#c98a2b"
+        },
+        // Deep navy with sky-blue/cyan accents.
+        "ocean-blue": {
+            dark: true,
+            bg: "#0a1628", bgElevated: "#0f2038", bgGlass: "#122544", border: "#1e3a5f",
+            textPrimary: "#eaf2fb", textSecondary: "#7fa3c9", textOnAccent: "#04121f",
+            accentA: "#4fc3f7", accentB: "#7c9eff", accentC: "#45e0c7",
+            success: "#4fd8a8", danger: "#ff8a80", warning: "#ffca6b"
+        },
+        // Deep forest with mint/lime/emerald accents.
+        "forest-green": {
+            dark: true,
+            bg: "#0d1912", bgElevated: "#14241a", bgGlass: "#172b1e", border: "#24402c",
+            textPrimary: "#eef6ee", textSecondary: "#8fae94", textOnAccent: "#04140a",
+            accentA: "#6fe3a4", accentB: "#b6e26d", accentC: "#37c299",
+            success: "#6fe3a4", danger: "#ff8f80", warning: "#f0c766"
+        },
+        // Near-black with a saturated magenta/violet/cyan gradient --
+        // bold and energetic rather than the other themes' restrained,
+        // low-saturation accents.
+        "prism-modern": {
+            dark: true,
+            bg: "#0b0b12", bgElevated: "#15141f", bgGlass: "#1a1826", border: "#322d47",
+            textPrimary: "#ffffff", textSecondary: "#a79ecb", textOnAccent: "#0b0b12",
+            accentA: "#ff3ec8", accentB: "#7b5bff", accentC: "#29e6ff",
+            success: "#3cf2a0", danger: "#ff4d6d", warning: "#ffcc33"
+        }
+    })
 
-    // soft periwinkle / blush / sage -- pastel, low-saturation accents
-    readonly property color accentA: dark ? "#a5b0fc" : "#6a74e0"
-    readonly property color accentB: dark ? "#f5b8cf" : "#d9679c"
-    readonly property color accentC: dark ? "#9fe6d2" : "#2fa583"
+    // -- palette ----------------------------------------------------------
+    readonly property color bg: _palette.bg
+    readonly property color bgElevated: _palette.bgElevated
+    readonly property color bgGlass: _palette.bgGlass
+    readonly property color border: _palette.border
 
-    readonly property color success: dark ? "#7fdcae" : "#2f9e6f"
-    readonly property color danger: dark ? "#f3a0a6" : "#d5555f"
-    readonly property color warning: dark ? "#f2cf8c" : "#c98a2b"
+    readonly property color textPrimary: _palette.textPrimary
+    readonly property color textSecondary: _palette.textSecondary
+    readonly property color textOnAccent: _palette.textOnAccent
+
+    readonly property color accentA: _palette.accentA
+    readonly property color accentB: _palette.accentB
+    readonly property color accentC: _palette.accentC
+
+    readonly property color success: _palette.success
+    readonly property color danger: _palette.danger
+    readonly property color warning: _palette.warning
 
     readonly property Gradient accentGradient: Gradient {
         orientation: Gradient.Horizontal
