@@ -59,7 +59,7 @@ def fetch_latest_version() -> str:
     than GET /releases/latest: that "latest" endpoint explicitly excludes
     prereleases by GitHub's own definition ("the most recent non-prerelease,
     non-draft release"), and 404s entirely if every release is a
-    prerelease -- which the project's own v0.1.0 (Beta) currently is. The
+    prerelease -- which was true for this project's own v0.1.0 (Beta). The
     list endpoint has no such filter, so this just takes the newest entry
     regardless of its prerelease flag.
     """
