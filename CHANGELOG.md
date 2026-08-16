@@ -28,6 +28,15 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   - Added `swig` and `liblgpio-dev`, both required to compile the `lgpio`
     Python package's C extension; the build previously failed with
     `command 'swig' failed` and then `cannot find -llgpio`.
+  - Fixed the in-app updater failing with `'uv' executable not found on
+    PATH, ~/.local/bin, or ~/.cargo/bin`: the whole script runs under
+    `sudo`, so `uv` was getting installed into *root's* home
+    (`/root/.local/bin`) and `.venv` was created root-owned, even though
+    both the app and its updater run as the target user afterwards and
+    look in *that* user's home. `uv`'s install, the venv creation, and
+    the initial `uv sync` now all run as the target user via `sudo -u`;
+    a leftover root-owned `.venv` from an earlier run of the old script
+    is detected and recreated automatically.
 
 ### UI
 
