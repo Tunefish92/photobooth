@@ -1027,6 +1027,85 @@ def test_auto_restart_switch_exists_and_toggling_it_writes_the_marker_file(runni
         _pump(0.3)
 
 
+def test_backup_tab_fields_exist(running_app):
+    """New feature: Settings -> Backup (replaces the removed USB export
+    feature). Confirms the tab's controls all exist -- the enable switch,
+    interval combo, scan/backup-now buttons, and status text."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 8)  # Backup is the last tab
+    _pump(0.3)
+
+    for name in (
+        "settingsBackupEnableSwitch",
+        "settingsBackupIntervalCombo",
+        "settingsBackupScanButton",
+        "settingsBackupNowButton",
+        "settingsBackupStatusText",
+    ):
+        assert root.findChild(QQuickItem, name) is not None, f"missing {name!r}"
+
+    combo = root.findChild(QQuickItem, "settingsBackupIntervalCombo")
+    assert list(combo.property("model")) == [
+        "Off (manual only)", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour",
+    ]
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_scan_backup_devices_returns_a_list(running_app):
+    _app, engine, controller, _warnings = running_app
+    result = controller.scanBackupDevices()
+    assert isinstance(result, list)
+
+
+def test_backup_now_is_a_no_op_with_no_device_configured(running_app):
+    _app, engine, controller, _warnings = running_app
+    data = controller.getSettingsJson()
+    assert data["backup"]["device_uuid"] == ""
+
+    controller.backupNow()
+    _pump(0.2)
+
+    assert controller.property("backupBusy") is False
+
+
+def test_backup_now_reports_failure_for_an_unplugged_device(running_app):
+    """Exercises the real async round-trip (run_in_background -> QThreadPool
+    -> the finished/failed signal back on the main thread), not just the
+    synchronous guard clauses."""
+    _app, engine, controller, _warnings = running_app
+
+    data = controller.getSettingsJson()
+    original = dict(data["backup"])
+    try:
+        data["backup"]["device_uuid"] = "not-a-real-uuid"
+        data["backup"]["device_label"] = "Nonexistent Drive"
+        controller.saveSettingsJson(data)
+        _pump(0.3)
+
+        # A missing device resolves synchronously (no real I/O), so it can
+        # finish within the first pump -- nothing meaningful to assert
+        # about the busy flag mid-flight here, just the end state.
+        controller.backupNow()
+        _pump(1.0)
+
+        assert controller.property("backupBusy") is False
+        assert controller.property("backupStatus") != ""
+    finally:
+        data = controller.getSettingsJson()
+        data["backup"] = original
+        controller.saveSettingsJson(data)
+        _pump(0.2)
+
+
 def test_saving_a_custom_photos_dir_moves_where_shots_are_stored(running_app, tmp_path):
     """Regression test: StorageConfig.photos_dir used to exist under the
     dead name `data_dir` and have zero effect -- paths.photos_dir() always

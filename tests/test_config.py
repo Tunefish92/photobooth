@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from photobooth.config.settings import (
     AppConfig,
+    BackupConfig,
     CameraConfig,
     FlowConfig,
     GpioConfig,
@@ -218,3 +219,41 @@ def test_storage_photos_dir_roundtrips_through_save_and_load(tmp_path: Path):
     reloaded = load_settings(path)
 
     assert reloaded.storage.photos_dir == "/mnt/usb-drive/photobooth"
+
+
+# -- backup -----------------------------------------------------------------
+
+
+def test_backup_config_defaults_to_disabled_with_no_device():
+    backup = load_settings(None).backup
+    assert backup.enable is False
+    assert backup.device_uuid == ""
+    assert backup.auto_interval_min == 0
+
+
+@pytest.mark.parametrize("minutes", [0, 5, 10, 15, 30, 60])
+def test_backup_config_accepts_every_allowed_interval(minutes):
+    BackupConfig(auto_interval_min=minutes)
+
+
+@pytest.mark.parametrize("minutes", [1, 20, 45, 90, -5])
+def test_backup_config_rejects_other_intervals(minutes):
+    with pytest.raises(ValidationError):
+        BackupConfig(auto_interval_min=minutes)
+
+
+def test_backup_config_roundtrips_through_save_and_load(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    settings = load_settings(None)
+    settings.backup.enable = True
+    settings.backup.device_uuid = "1234-ABCD"
+    settings.backup.device_label = "MYDRIVE"
+    settings.backup.auto_interval_min = 15
+
+    save_settings(settings, path)
+    reloaded = load_settings(path)
+
+    assert reloaded.backup.enable is True
+    assert reloaded.backup.device_uuid == "1234-ABCD"
+    assert reloaded.backup.device_label == "MYDRIVE"
+    assert reloaded.backup.auto_interval_min == 15

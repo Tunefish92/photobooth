@@ -102,9 +102,11 @@ use_auth = true
 user = ""
 password = ""
 
-[usb_export]
-enable = true
-auto_detect = true
+[backup]
+enable = false
+device_uuid = ""
+device_label = ""
+auto_interval_min = 0
 
 [admin]
 pin = "1234"

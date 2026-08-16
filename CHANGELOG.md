@@ -119,10 +119,37 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   as opposed to the far more common port 587 STARTTLS): the mailer always
   used plain `SMTP` + `starttls()`, which sends a plaintext `EHLO` into a
   TLS handshake and fails on port 465. Now uses `SMTP_SSL` for that case.
-- Audited USB export's Pi auto-mount assumptions (`/media/<user>/<label>`
-  and `/run/media/<user>/<label>`, covering both older and newer `udisks2`
-  conventions) and WebDAV's request handling -- both already correct, no
-  changes needed there.
+- Audited WebDAV's request handling -- already correct, no changes
+  needed.
+- **Removed per-photo USB export** ("Save to USB" on the postprocess
+  screen, `UsbExportConfig`) in favor of the whole-library Backup feature
+  below, which supersedes it.
+
+### Backup (new)
+
+- New Settings -> Backup tab, replacing per-photo USB export: copies
+  every photo folder under the configured photo directory plus a
+  consistent SQLite snapshot (via `sqlite3`'s own backup API, not a raw
+  file copy -- the database can be open and being written to by the
+  running app) onto a selected removable drive.
+  - **Incremental**: a file already on the drive with a matching size and
+    an as-new-or-newer mtime is left alone, so repeat backups (especially
+    the scheduled automatic ones) only copy what's actually new.
+  - **A kind of versioning**: each run appends one line to a JSON-lines
+    manifest on the drive (timestamp, files copied/skipped, bytes) --
+    lightweight backup history without the complexity, or FAT32/exFAT
+    incompatibility (most USB sticks are formatted one of those, and
+    neither supports hardlinks), of true per-run snapshots.
+  - **The device is remembered by filesystem UUID, not mount path** --
+    Raspberry Pi OS mounts removable drives under `/media/<user>/<label>`,
+    a path that changes with the label or which USB port it's in. Picking
+    a drive in Settings resolves and stores its UUID (via
+    `/dev/disk/by-uuid`); backups later re-resolve wherever that UUID is
+    *currently* mounted, so a replug or reboot doesn't lose track of which
+    physical drive was chosen.
+  - **Manual or scheduled**: a "Backup now" button, plus an optional
+    auto-backup interval (5/10/15/30 minutes or 1 hour) run by its own
+    timer independent of whatever the kiosk is doing.
 
 ### Dev tooling
 
@@ -133,10 +160,13 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
 - Added coverage that didn't exist before: the email and WebDAV sharing
   backends (mocked `smtplib`/`httpx`, no live server needed), GPIO pin
   range/uniqueness validation, the theme system end-to-end (selecting and
-  saving a theme actually changes the live `Theme` singleton), and a
+  saving a theme actually changes the live `Theme` singleton), a
   catalog-wide sweep confirming every `Translator.tr()` call site across
   every `.qml` file resolves in both languages (not just Settings screen
-  fields, which was the only thing previously checked).
+  fields, which was the only thing previously checked), and the backup
+  module (device UUID resolution surviving a simulated replug, incremental
+  copy skip/recopy behavior, the SQLite snapshot being a real independent
+  copy, and the full async round-trip through `backupNow()`).
 
 ## [0.1.0] - 2026-08-12 (Beta)
 
