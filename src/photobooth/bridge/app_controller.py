@@ -92,7 +92,7 @@ class AppController(QObject):
         self._camera_ready = False
 
         self._db = PhotoDatabase(paths.database_file())
-        self._store = SessionStore(paths.photos_dir(), settings.storage)
+        self._store = SessionStore(paths.photos_dir(settings.storage.photos_dir), settings.storage)
         self._printer = create_printer_backend(
             settings.printer, paths.user_data_dir() / "print_debug"
         )
@@ -543,7 +543,7 @@ class AppController(QObject):
         # Cheap to rebuild, so these take effect immediately; camera backend,
         # GPIO, and window mode are flagged "restart required" in the UI since
         # re-initializing them live is riskier (open hardware handles, etc.)
-        self._store = SessionStore(paths.photos_dir(), new_settings.storage)
+        self._store = SessionStore(paths.photos_dir(new_settings.storage.photos_dir), new_settings.storage)
         self._printer = create_printer_backend(
             new_settings.printer, paths.user_data_dir() / "print_debug"
         )

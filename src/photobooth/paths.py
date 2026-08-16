@@ -48,8 +48,11 @@ def user_data_dir() -> Path:
     return path
 
 
-def photos_dir() -> Path:
-    path = user_data_dir() / "photos"
+def photos_dir(override: str = "") -> Path:
+    """`override` is StorageConfig.photos_dir -- an absolute path to use
+    instead of the default app-data location (e.g. a mounted external
+    drive), or "" to use the default."""
+    path = Path(override).expanduser() if override else user_data_dir() / "photos"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

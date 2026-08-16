@@ -325,6 +325,23 @@ Item {
                                 text: root.settingsData.admin ? root.settingsData.admin.pin : ""
                                 onEditingFinished: root.settingsData.admin.pin = text
                             }
+
+                            Label { text: Translator.tr("settings.field.photos_dir"); color: Theme.textSecondary }
+                            WideText {
+                                objectName: "settingsPhotosDirField"
+                                placeholderText: Translator.tr("settings.field.photos_dir_placeholder")
+                                text: root.settingsData.storage ? root.settingsData.storage.photos_dir : ""
+                                onEditingFinished: root.settingsData.storage.photos_dir = text
+                            }
+                            Text {
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                text: Translator.tr("settings.field.photos_dir_hint")
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
+                            }
                         }
 
                         // -- Photo Modes ------------------------------------------------

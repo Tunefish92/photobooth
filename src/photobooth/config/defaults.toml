@@ -79,7 +79,8 @@ chroma_key_background = ""
 basedir = "%Y-%m-%d"
 basename = "photobooth"
 keep_pictures = true
-data_dir = "data"
+# Absolute path to store photos under; empty uses the default app-data location.
+photos_dir = ""
 
 [mailer]
 enable = false
