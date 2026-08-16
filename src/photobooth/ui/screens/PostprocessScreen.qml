@@ -74,14 +74,6 @@ Item {
                     enabled: !App.postprocessBusy
                     onClicked: App.requestWebdavUpload()
                 }
-                PrimaryButton {
-                    visible: App.usbExportEnabled
-                    text: Translator.tr("postprocess.usb")
-                    outlined: true
-                    minWidth: 260
-                    enabled: !App.postprocessBusy
-                    onClicked: App.requestUsbExport()
-                }
             }
 
             Item { width: 1; height: Theme.spaceMd }

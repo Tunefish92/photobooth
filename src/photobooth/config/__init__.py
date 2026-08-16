@@ -1,5 +1,6 @@
 from .settings import (
     AppConfig,
+    BackupConfig,
     CameraConfig,
     EffectsConfig,
     FlowConfig,
@@ -9,7 +10,6 @@ from .settings import (
     PrinterConfig,
     Settings,
     StorageConfig,
-    UsbExportConfig,
     WebdavConfig,
     load_settings,
     save_settings,
@@ -17,6 +17,7 @@ from .settings import (
 
 __all__ = [
     "AppConfig",
+    "BackupConfig",
     "CameraConfig",
     "EffectsConfig",
     "FlowConfig",
@@ -26,7 +27,6 @@ __all__ = [
     "PrinterConfig",
     "Settings",
     "StorageConfig",
-    "UsbExportConfig",
     "WebdavConfig",
     "load_settings",
     "save_settings",

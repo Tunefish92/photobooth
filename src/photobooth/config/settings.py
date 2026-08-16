@@ -179,9 +179,18 @@ class WebdavConfig(BaseModel):
     password: str = ""
 
 
-class UsbExportConfig(BaseModel):
-    enable: bool = True
-    auto_detect: bool = True
+class BackupConfig(BaseModel):
+    enable: bool = False
+    # Filesystem UUID of the chosen removable drive (see
+    # photobooth.backup.devices) -- not the mount path, which is
+    # label-derived and can change across a replug/reboot. device_label is
+    # purely informational, shown in Settings so the UUID doesn't have to
+    # be recognized by eye.
+    device_uuid: str = ""
+    device_label: str = ""
+    # Minutes between automatic backups; 0 disables the timer (manual
+    # "Backup now" in Settings -> Backup still works either way).
+    auto_interval_min: Literal[0, 5, 10, 15, 30, 60] = 0
 
 
 class AdminConfig(BaseModel):
@@ -200,7 +209,7 @@ class Settings(BaseModel):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     mailer: MailerConfig = Field(default_factory=MailerConfig)
     webdav: WebdavConfig = Field(default_factory=WebdavConfig)
-    usb_export: UsbExportConfig = Field(default_factory=UsbExportConfig)
+    backup: BackupConfig = Field(default_factory=BackupConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)
 
 

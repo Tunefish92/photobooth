@@ -39,7 +39,8 @@ Item {
         { icon: "↗", label: Translator.tr("settings.tab.sharing") },
         { icon: "⏻", label: Translator.tr("settings.tab.gpio") },
         { icon: "▦", label: Translator.tr("settings.tab.layout") },
-        { icon: "↻", label: Translator.tr("settings.tab.update") }
+        { icon: "↻", label: Translator.tr("settings.tab.update") },
+        { icon: "⏏", label: Translator.tr("settings.tab.backup") }
     ]
 
     readonly property var allModes: ["single", "grid", "gif", "boomerang"]
@@ -591,12 +592,6 @@ Item {
                                 text: root.settingsData.webdav ? root.settingsData.webdav.password : ""
                                 onEditingFinished: root.settingsData.webdav.password = text
                             }
-
-                            Label { text: Translator.tr("settings.field.usb_export_enable"); color: Theme.textSecondary }
-                            Switch {
-                                checked: root.settingsData.usb_export ? root.settingsData.usb_export.enable : true
-                                onToggled: root.settingsData.usb_export.enable = checked
-                            }
                         }
 
                         // -- GPIO ---------------------------------------------------
@@ -1057,6 +1052,158 @@ Item {
                                     enabled: !App.updateApplying
                                     onClicked: App.applyUpdate()
                                 }
+                            }
+
+                            Item { Layout.fillHeight: true }
+                        }
+
+                        // -- Backup ---------------------------------------------------
+                        ColumnLayout {
+                            id: backupPage
+                            width: stack.width
+                            spacing: Theme.spaceMd
+
+                            property var foundDevices: []
+
+                            function rescan() { foundDevices = App.scanBackupDevices() }
+
+                            // Re-scan whenever this page becomes the visible one --
+                            // covers a drive plugged in after Settings was opened.
+                            Connections {
+                                target: root
+                                function onCurrentIndexChanged() {
+                                    if (root.currentIndex === 8) backupPage.rescan()
+                                }
+                            }
+                            Component.onCompleted: rescan()
+
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: root.wide ? 2 : 1
+                                columnSpacing: Theme.spaceLg
+                                rowSpacing: Theme.spaceMd
+
+                                Label { text: Translator.tr("settings.field.backup_enable"); color: Theme.textSecondary }
+                                Switch {
+                                    objectName: "settingsBackupEnableSwitch"
+                                    checked: root.settingsData.backup ? root.settingsData.backup.enable : false
+                                    onToggled: root.settingsData.backup.enable = checked
+                                }
+
+                                Label { text: Translator.tr("settings.field.backup_interval"); color: Theme.textSecondary }
+                                WideCombo {
+                                    objectName: "settingsBackupIntervalCombo"
+                                    readonly property var minutesValues: [0, 5, 10, 15, 30, 60]
+                                    model: [
+                                        Translator.tr("settings.field.backup_interval_off"),
+                                        Translator.tr("settings.field.backup_interval_5"),
+                                        Translator.tr("settings.field.backup_interval_10"),
+                                        Translator.tr("settings.field.backup_interval_15"),
+                                        Translator.tr("settings.field.backup_interval_30"),
+                                        Translator.tr("settings.field.backup_interval_60")
+                                    ]
+                                    currentIndex: minutesValues.indexOf(root.settingsData.backup ? root.settingsData.backup.auto_interval_min : 0)
+                                    onActivated: root.settingsData.backup.auto_interval_min = minutesValues[currentIndex]
+                                }
+                            }
+
+                            Text {
+                                text: Translator.tr("settings.field.backup_device_current").arg(
+                                    App.backupDeviceLabel || Translator.tr("settings.field.backup_device_none"))
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeBody
+                                font.weight: Font.DemiBold
+                                color: Theme.textPrimary
+                            }
+                            Text {
+                                visible: root.settingsData.backup && root.settingsData.backup.device_uuid !== App.backupDeviceUuid
+                                text: Translator.tr("settings.field.backup_device_unsaved")
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.warning
+                            }
+
+                            RowLayout {
+                                spacing: Theme.spaceMd
+
+                                PrimaryButton {
+                                    objectName: "settingsBackupScanButton"
+                                    text: Translator.tr("settings.field.backup_scan")
+                                    outlined: true
+                                    onClicked: backupPage.rescan()
+                                }
+                            }
+
+                            Text {
+                                visible: backupPage.foundDevices.length === 0
+                                text: Translator.tr("settings.field.backup_no_devices")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
+                            }
+
+                            Column {
+                                Layout.fillWidth: true
+                                spacing: Theme.spaceXs
+
+                                Repeater {
+                                    model: backupPage.foundDevices
+                                    delegate: Rectangle {
+                                        readonly property bool selected: root.settingsData.backup && root.settingsData.backup.device_uuid === modelData.uuid
+                                        width: backupPage.width
+                                        height: 52
+                                        radius: Theme.radiusSm
+                                        color: selected ? Theme.bgElevated : "transparent"
+                                        border.width: selected ? 1 : 0
+                                        border.color: Theme.border
+
+                                        Text {
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: Theme.spaceSm
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: modelData.label + "  (" + modelData.mount_path + ")"
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: Theme.sizeBody
+                                            color: Theme.textPrimary
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                root.settingsData.backup.device_uuid = modelData.uuid
+                                                root.settingsData.backup.device_label = modelData.label
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+
+                            RowLayout {
+                                spacing: Theme.spaceMd
+
+                                PrimaryButton {
+                                    objectName: "settingsBackupNowButton"
+                                    text: Translator.tr("settings.field.backup_now")
+                                    enabled: !App.backupBusy && App.backupDeviceUuid !== ""
+                                    onClicked: App.backupNow()
+                                }
+                            }
+
+                            Text {
+                                objectName: "settingsBackupStatusText"
+                                Layout.fillWidth: true
+                                text: App.backupBusy ? Translator.tr("settings.field.backup_running") : App.backupStatus
+                                wrapMode: Text.WordWrap
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
                             }
 
                             Item { Layout.fillHeight: true }

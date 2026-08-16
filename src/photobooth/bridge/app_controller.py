@@ -19,6 +19,7 @@ from PySide6.QtCore import Property, QCoreApplication, QObject, QThread, QTimer,
 from PySide6.QtGui import QImage
 
 from photobooth import __version__, paths, updater
+from photobooth.backup import BackupResult, find_removable_devices, run_backup
 from photobooth.bridge.background import run_in_background
 from photobooth.bridge.camera_worker import CameraWorker
 from photobooth.bridge.preview_provider import PreviewImageProvider
@@ -36,7 +37,7 @@ from photobooth.imaging import (
     make_gif,
 )
 from photobooth.printing import create_printer_backend
-from photobooth.sharing import export_to_first_available, send_email, upload_file
+from photobooth.sharing import send_email, upload_file
 from photobooth.storage import PhotoDatabase, SessionStore
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,8 @@ class AppController(QObject):
     updateInfoChanged = Signal()
     selectedModeChanged = Signal()
     autoRestartEnabledChanged = Signal()
+    backupBusyChanged = Signal()
+    backupStatusChanged = Signal()
     toast = Signal(str)
 
     _request_capture = Signal()
@@ -122,6 +125,15 @@ class AppController(QObject):
         self._update_available = False
         self._latest_version = ""
         self._update_error = ""
+
+        self._backup_busy = False
+        self._backup_status = ""
+        # Not in _scoped_timers -- those all get stopped on every state
+        # change (see _on_state_changed), but a scheduled backup needs to
+        # keep ticking regardless of what the kiosk is doing.
+        self._backup_timer = QTimer(self)
+        self._backup_timer.timeout.connect(self._run_auto_backup)
+        self._apply_backup_schedule()
 
         self._greeter_timer = self._make_timer(single_shot=True)
         self._greeter_timer.timeout.connect(self._sm_start_countdown)
@@ -410,22 +422,64 @@ class AppController(QObject):
             on_error=self._on_action_failed,
         )
 
+    # -- backup, invoked from QML --------------------------------------------
+    def _apply_backup_schedule(self) -> None:
+        """(Re)starts or stops the auto-backup timer to match current
+        settings -- called at startup and again whenever settings are
+        saved, since auto_interval_min/enable may have just changed."""
+        minutes = self._settings.backup.auto_interval_min
+        if self._settings.backup.enable and minutes > 0:
+            self._backup_timer.setInterval(minutes * 60 * 1000)
+            self._backup_timer.start()
+        else:
+            self._backup_timer.stop()
+
+    def _run_auto_backup(self) -> None:
+        if self._settings.backup.enable and self._settings.backup.device_uuid:
+            self.backupNow()
+
+    @Slot(result="QVariant")
+    def scanBackupDevices(self):
+        """Currently-plugged-in removable drives, for the Settings ->
+        Backup device picker. Called on demand (entering that tab, or a
+        "Refresh" button) rather than kept live -- plug state can change
+        at any moment and there's no cheap way to be notified of it."""
+        return [
+            {"uuid": d.uuid, "label": d.label, "mount_path": str(d.mount_path)}
+            for d in find_removable_devices()
+        ]
+
     @Slot()
-    def requestUsbExport(self) -> None:
-        session = self._sm.session
-        if self._postprocess_busy or session is None:
+    def backupNow(self) -> None:
+        if self._backup_busy or not self._settings.backup.device_uuid:
             return
-        self._set_busy(True)
+        self._backup_busy = True
+        self.backupBusyChanged.emit()
         run_in_background(
-            export_to_first_available,
-            session,
-            on_success=self._on_usb_export_done,
-            on_error=self._on_action_failed,
+            run_backup,
+            self._settings.backup,
+            paths.photos_dir(self._settings.storage.photos_dir),
+            paths.database_file(),
+            on_success=self._on_backup_done,
+            on_error=self._on_backup_failed,
         )
 
-    def _on_usb_export_done(self, result: Path | None) -> None:
-        key = "postprocess.usb_ok" if result is not None else "postprocess.usb_missing"
-        self._on_action_done(key)
+    def _on_backup_done(self, result: BackupResult) -> None:
+        self._backup_busy = False
+        self._backup_status = self.translator.tr("backup.status_done").format(
+            copied=result.files_copied, skipped=result.files_skipped
+        )
+        self.backupBusyChanged.emit()
+        self.backupStatusChanged.emit()
+        self.toast.emit(self.translator.tr("backup.done"))
+
+    def _on_backup_failed(self, message: str) -> None:
+        logger.warning("Backup failed: %s", message)
+        self._backup_busy = False
+        self._backup_status = message
+        self.backupBusyChanged.emit()
+        self.backupStatusChanged.emit()
+        self.toast.emit(self.translator.tr("backup.failed"))
 
     # -- update check/apply, invoked from QML --------------------------------
     @Slot()
@@ -625,6 +679,7 @@ class AppController(QObject):
         self._printer = create_printer_backend(
             new_settings.printer, paths.user_data_dir() / "print_debug"
         )
+        self._apply_backup_schedule()
         self.configChanged.emit()
         self.toast.emit(self.translator.tr("settings.saved"))
 
@@ -688,6 +743,14 @@ class AppController(QObject):
     def autoRestartEnabled(self) -> bool:
         return not paths.auto_restart_marker_file().exists()
 
+    @Property(bool, notify=backupBusyChanged)
+    def backupBusy(self) -> bool:
+        return self._backup_busy
+
+    @Property(str, notify=backupStatusChanged)
+    def backupStatus(self) -> str:
+        return self._backup_status
+
     @Property(list, notify=configChanged)
     def enabledFilters(self) -> list[str]:
         return list(self._settings.effects.enabled_filters)
@@ -700,6 +763,14 @@ class AppController(QObject):
     def theme(self) -> str:
         return self._settings.app.theme
 
+    @Property(str, notify=configChanged)
+    def backupDeviceUuid(self) -> str:
+        return self._settings.backup.device_uuid
+
+    @Property(str, notify=configChanged)
+    def backupDeviceLabel(self) -> str:
+        return self._settings.backup.device_label
+
     @Property(bool, notify=configChanged)
     def printerEnabled(self) -> bool:
         return self._settings.printer.enable
@@ -711,10 +782,6 @@ class AppController(QObject):
     @Property(bool, notify=configChanged)
     def webdavEnabled(self) -> bool:
         return self._settings.webdav.enable
-
-    @Property(bool, notify=configChanged)
-    def usbExportEnabled(self) -> bool:
-        return self._settings.usb_export.enable
 
     @Property(bool, notify=configChanged)
     def printConfirmation(self) -> bool:

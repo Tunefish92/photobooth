@@ -20,6 +20,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 | **Camera** ![Camera](docs/screenshots/settings_camera.png) | **Printer** ![Printer](docs/screenshots/settings_printer.png) |
 | **Sharing** ![Sharing](docs/screenshots/settings_sharing.png) | **GPIO** ![GPIO](docs/screenshots/settings_gpio.png) |
 | **Layout** ![Layout](docs/screenshots/settings_layout.png) | **Update** ![Update](docs/screenshots/settings_update.png) |
+| **Backup** ![Backup](docs/screenshots/settings_backup.png) | |
 
 </details>
 
@@ -50,7 +51,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   custom background/overlay/logo slots
 - Printing via CUPS (Canon SELPHY CP1300/CP1500 out of the box), with a PDF
   debug fallback
-- Email, WebDAV upload, and USB export sharing
+- Email and WebDAV upload sharing (per-photo, from the postprocess screen)
 - GPIO support for a physical trigger button, exit button, lamp, and RGB
   LED ring (BCM pin numbering, validated to the 40-pin header's usable
   GPIO2-GPIO27 range with no two roles sharing a pin -- see
@@ -65,6 +66,13 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   bold, saturated Prism Modern
 - Configurable photo storage directory (e.g. a mounted USB drive) instead
   of the default app-data location
+- Whole-library backup to a USB drive (Settings -> Backup): copies every
+  photo folder plus a consistent SQLite snapshot, incrementally (repeat
+  runs only copy what's new) with a small history log of each run. The
+  device is remembered by filesystem UUID, not mount path, so replugging
+  it or rebooting doesn't lose track of which drive it is. Runs on demand
+  ("Backup now") or automatically on a configurable interval (5/10/15/30
+  min or 1h)
 - English/German UI, fully translated
 - Idle-screen slideshow of recent shots, SQLite-indexed
 
