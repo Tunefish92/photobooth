@@ -56,23 +56,39 @@ apt-get install -y \
 echo "==> Adding $TARGET_USER to hardware groups"
 usermod -aG video,render,plugdev,lp,lpadmin "$TARGET_USER"
 
-if ! command -v uv >/dev/null 2>&1; then
-    echo "==> Installing uv"
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
-    if ! command -v uv >/dev/null 2>&1; then
-        echo "uv installed but not on PATH; looked in \$HOME/.local/bin and \$HOME/.cargo/bin" >&2
+# Installed and run as $TARGET_USER (not root) throughout this block --
+# this whole script runs under `sudo`, so a plain `curl | sh` / `uv sync`
+# here would install uv into *root's* home (/root/.local/bin) and leave
+# the venv root-owned. Both the app and its in-app updater (Settings ->
+# Update) run as $TARGET_USER afterwards and re-invoke `uv` themselves by
+# checking $TARGET_USER's own ~/.local/bin -- a root-installed uv is
+# invisible to them ("'uv' executable not found on PATH, ~/.local/bin, or
+# ~/.cargo/bin"), and a root-owned venv can't be re-synced by that user.
+UV_BIN="$TARGET_HOME/.local/bin/uv"
+if [[ ! -x "$UV_BIN" ]]; then
+    echo "==> Installing uv (as $TARGET_USER)"
+    sudo -H -u "$TARGET_USER" bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+    if [[ ! -x "$UV_BIN" ]]; then
+        echo "uv installed but not found at $UV_BIN" >&2
         exit 1
     fi
 fi
 
-echo "==> Creating virtualenv (with access to apt-installed picamera2)"
 cd "$REPO_DIR"
-python3 -m venv --system-site-packages .venv
+if [[ -d .venv ]] && [[ "$(stat -c '%U' .venv)" != "$TARGET_USER" ]]; then
+    # Leftover from an earlier run of the pre-fix script, which created
+    # this as root -- $TARGET_USER can't write into it, so a plain `python3
+    # -m venv` below would fail. It's a generated artifact, safe to nuke
+    # and recreate.
+    echo "==> Removing .venv owned by $(stat -c '%U' .venv), recreating as $TARGET_USER"
+    rm -rf .venv
+fi
+
+echo "==> Creating virtualenv (with access to apt-installed picamera2)"
+sudo -u "$TARGET_USER" python3 -m venv --system-site-packages .venv
 
 echo "==> Syncing Python dependencies (uv sync, pinned by uv.lock)"
-export UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv"
-uv sync --no-dev
+sudo -u "$TARGET_USER" env UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv" "$UV_BIN" sync --no-dev
 
 echo "==> Installing desktop autostart entry"
 chmod +x "$REPO_DIR/scripts/run-kiosk.sh"
