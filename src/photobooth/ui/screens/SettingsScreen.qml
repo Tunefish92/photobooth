@@ -320,6 +320,26 @@ Item {
                                 onToggled: root.settingsData.app.hide_cursor = checked
                             }
 
+                            Label { text: Translator.tr("settings.field.auto_restart"); color: Theme.textSecondary }
+                            Switch {
+                                objectName: "settingsAutoRestartSwitch"
+                                checked: App.autoRestartEnabled
+                                // Takes effect immediately (on the next exit), unlike
+                                // every other field on this screen -- there's no
+                                // corresponding settingsData entry to stage, and no
+                                // Save needed.
+                                onToggled: App.setAutoRestartEnabled(checked)
+                            }
+                            Text {
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                text: Translator.tr("settings.field.auto_restart_hint")
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
+                            }
+
                             Label { text: Translator.tr("settings.field.admin_pin"); color: Theme.textSecondary }
                             WideText {
                                 text: root.settingsData.admin ? root.settingsData.admin.pin : ""

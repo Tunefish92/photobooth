@@ -37,7 +37,10 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ## Features
 
 - Single / grid / GIF / boomerang capture modes, individually toggled on/off
-  from Settings
+  from Settings. Tapping a tile opens a confirmation screen (title + icon
+  for that mode, Start/Back buttons) rather than starting immediately;
+  finishing a session (Done) returns to that same mode's confirmation
+  screen rather than the tile grid, ready for another round
 - Camera backends: Canon DSLR (gphoto2), Raspberry Pi Camera Module
   (picamera2), USB webcam (OpenCV), and a dummy backend for development
 - Live preview during countdown, animated on-screen countdown ring, with a
@@ -51,12 +54,17 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 - GPIO support for a physical trigger button, exit button, lamp, and RGB
   LED ring (BCM pin numbering, validated to the 40-pin header's usable
   GPIO2-GPIO27 range with no two roles sharing a pin -- see
-  `src/photobooth/hardware/gpio.py` for wiring notes)
+  `src/photobooth/hardware/gpio.py` for wiring notes). The trigger button
+  acts as the confirmation screen's Start button -- it only does anything
+  once a mode is selected, not from the idle tile grid
 - In-app, PIN-gated settings covering every option above, plus an
-  on-screen exit-with-confirmation button
+  on-screen exit-with-confirmation button and a toggle for whether the
+  kiosk restarts itself after exiting or crashing
 - Five selectable themes (Settings -> General -> Theme): the original
   soft-pastel Aurora in dark/light, plus Ocean Blue, Forest Green, and the
   bold, saturated Prism Modern
+- Configurable photo storage directory (e.g. a mounted USB drive) instead
+  of the default app-data location
 - English/German UI, fully translated
 - Idle-screen slideshow of recent shots, SQLite-indexed
 

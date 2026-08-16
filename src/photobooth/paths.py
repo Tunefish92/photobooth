@@ -65,3 +65,11 @@ def log_file() -> Path:
     path = user_data_dir() / "logs"
     path.mkdir(parents=True, exist_ok=True)
     return path / "photobooth.log"
+
+
+def auto_restart_marker_file() -> Path:
+    """Sentinel file `scripts/run-kiosk.sh` checks for after the app exits
+    (crash or a deliberate quit -- the wrapper can't tell them apart, and
+    Settings -> General's "Restart automatically" toggle deliberately
+    doesn't try to) -- present means "don't relaunch"."""
+    return user_data_dir() / "auto_restart_disabled"

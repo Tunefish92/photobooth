@@ -35,3 +35,7 @@ def test_photos_dir_override_expands_user_home(monkeypatch, tmp_path: Path):
 
     assert result == tmp_path / "booth-photos"
     assert result.is_dir()
+
+
+def test_auto_restart_marker_file_is_under_the_data_dir():
+    assert paths.auto_restart_marker_file() == paths.user_data_dir() / "auto_restart_disabled"

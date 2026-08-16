@@ -78,6 +78,7 @@ class AppController(QObject):
     configChanged = Signal()
     updateInfoChanged = Signal()
     selectedModeChanged = Signal()
+    autoRestartEnabledChanged = Signal()
     toast = Signal(str)
 
     _request_capture = Signal()
@@ -277,11 +278,12 @@ class AppController(QObject):
         self._sm.raise_error(f"Capture failed: {message}")
 
     def _on_gpio_trigger(self) -> None:
-        # On the "start this mode?" confirmation screen, the physical
-        # trigger button acts as that screen's Start button (the selected
-        # mode); otherwise it's a shortcut straight to the default mode.
-        mode = self._selected_mode or self._settings.flow.default_mode
-        self.start(mode, self._settings.effects.default_filter)
+        # Only acts as the "start this mode?" confirmation screen's Start
+        # button -- a no-op on the idle tile grid (nothing selected yet),
+        # same as tapping empty space there does nothing.
+        if not self._selected_mode:
+            return
+        self.start(self._selected_mode, self._settings.effects.default_filter)
 
     # -- processing -----------------------------------------------------------
     def _run_processing(self) -> None:
@@ -499,6 +501,21 @@ class AppController(QObject):
         self._selected_mode = ""
         self.selectedModeChanged.emit()
 
+    @Slot(bool)
+    def setAutoRestartEnabled(self, enabled: bool) -> None:
+        """Settings -> General's "Restart automatically after exit or
+        crash" toggle. Takes effect on the *next* exit, not immediately --
+        it just leaves/removes a sentinel file scripts/run-kiosk.sh's
+        restart loop checks after the process has already ended, so there
+        is nothing for the running instance itself to change right now."""
+        marker = paths.auto_restart_marker_file()
+        if enabled:
+            marker.unlink(missing_ok=True)
+        else:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
+        self.autoRestartEnabledChanged.emit()
+
     @Slot(str, str)
     def start(self, mode: str, filter_name: str = "none") -> None:
         if self._sm.state != State.IDLE:
@@ -666,6 +683,10 @@ class AppController(QObject):
     @Property(str, notify=selectedModeChanged)
     def selectedMode(self) -> str:
         return self._selected_mode
+
+    @Property(bool, notify=autoRestartEnabledChanged)
+    def autoRestartEnabled(self) -> bool:
+        return not paths.auto_restart_marker_file().exists()
 
     @Property(list, notify=configChanged)
     def enabledFilters(self) -> list[str]:

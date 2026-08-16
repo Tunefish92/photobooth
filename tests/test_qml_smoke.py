@@ -377,20 +377,19 @@ def test_gpio_trigger_starts_the_selected_mode_when_one_is_pending(running_app):
     _pump(0.3)
 
 
-def test_gpio_trigger_falls_back_to_default_mode_with_no_selection(running_app):
+def test_gpio_trigger_does_nothing_on_the_idle_tile_grid(running_app):
+    """Change request: the GPIO trigger pin only acts as the confirm
+    screen's Start button -- with no mode selected (still on the idle
+    tile grid), pressing it must not start anything (previously it fell
+    back to flow.default_mode as a shortcut; that shortcut is gone)."""
     _app, engine, controller, _warnings = running_app
     assert controller.property("selectedMode") == ""
-
-    default_mode = controller.getSettingsJson()["flow"]["default_mode"]
 
     controller._on_gpio_trigger()
     _pump(0.3)
 
-    assert controller.state == "greeter"
-    assert controller._sm.session.mode == default_mode
-
-    controller.hardReset()
-    _pump(0.3)
+    assert controller.state == "idle"
+    assert controller._sm.session is None
 
 
 def test_selected_mode_resets_on_a_hard_reset_back_to_idle(running_app):
@@ -985,6 +984,47 @@ def test_photos_dir_field_exists_in_general_tab_and_is_editable(running_app):
 
     controller.exitSettings()
     _pump(0.3)
+
+
+def test_auto_restart_switch_exists_and_toggling_it_writes_the_marker_file(running_app):
+    """New feature: Settings -> General -> "Restart automatically after
+    exit or crash" toggle. Unlike every other field here it applies
+    immediately (no Save needed) by creating/removing a sentinel file
+    scripts/run-kiosk.sh checks after the app process has already exited."""
+    from photobooth import paths
+
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+    marker = paths.auto_restart_marker_file()
+
+    assert controller.property("autoRestartEnabled") is True
+    assert not marker.exists()
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 0)  # General tab
+    _pump(0.3)
+
+    switch = root.findChild(QQuickItem, "settingsAutoRestartSwitch")
+    assert switch is not None
+    assert switch.property("checked") is True
+
+    try:
+        controller.setAutoRestartEnabled(False)
+        _pump(0.2)
+        assert controller.property("autoRestartEnabled") is False
+        assert marker.is_file()
+
+        controller.setAutoRestartEnabled(True)
+        _pump(0.2)
+        assert controller.property("autoRestartEnabled") is True
+        assert not marker.exists()
+    finally:
+        marker.unlink(missing_ok=True)
+        controller.exitSettings()
+        _pump(0.3)
 
 
 def test_saving_a_custom_photos_dir_moves_where_shots_are_stored(running_app, tmp_path):
