@@ -151,7 +151,10 @@ class StorageConfig(BaseModel):
     basedir: str = "%Y-%m-%d"
     basename: str = "photobooth"
     keep_pictures: bool = True
-    data_dir: str = "data"
+    # Absolute path to store photos under, e.g. a mounted external drive.
+    # Empty (the default) uses the platform's standard app-data location
+    # (see photobooth.paths.photos_dir).
+    photos_dir: str = ""
 
 
 class MailerConfig(BaseModel):

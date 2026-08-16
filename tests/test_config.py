@@ -200,3 +200,21 @@ def test_app_config_accepts_every_theme(theme):
 def test_app_config_rejects_unknown_theme():
     with pytest.raises(ValidationError):
         AppConfig(theme="not-a-real-theme")
+
+
+# -- storage.photos_dir ---------------------------------------------------
+
+
+def test_storage_config_photos_dir_defaults_to_empty():
+    assert load_settings(None).storage.photos_dir == ""
+
+
+def test_storage_photos_dir_roundtrips_through_save_and_load(tmp_path: Path):
+    path = tmp_path / "config.toml"
+    settings = load_settings(None)
+    settings.storage.photos_dir = "/mnt/usb-drive/photobooth"
+
+    save_settings(settings, path)
+    reloaded = load_settings(path)
+
+    assert reloaded.storage.photos_dir == "/mnt/usb-drive/photobooth"

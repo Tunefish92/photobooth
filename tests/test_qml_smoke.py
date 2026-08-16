@@ -762,6 +762,54 @@ def test_camera_inter_shot_delay_field_exists_and_is_editable(running_app):
     _pump(0.3)
 
 
+def test_photos_dir_field_exists_in_general_tab_and_is_editable(running_app):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 0)  # General tab
+    _pump(0.3)
+
+    field = root.findChild(QQuickItem, "settingsPhotosDirField")
+    assert field is not None
+    assert field.property("enabled") is True
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_saving_a_custom_photos_dir_moves_where_shots_are_stored(running_app, tmp_path):
+    """Regression test: StorageConfig.photos_dir used to exist under the
+    dead name `data_dir` and have zero effect -- paths.photos_dir() always
+    used the default app-data location no matter what was configured.
+    Confirm a saved override actually changes where the next shot lands."""
+    _app, engine, controller, _warnings = running_app
+
+    custom_dir = tmp_path / "custom-photos"
+    data = controller.getSettingsJson()
+    original = data["storage"]["photos_dir"]
+    try:
+        data["storage"]["photos_dir"] = str(custom_dir)
+        controller.saveSettingsJson(data)
+        _pump(0.3)
+
+        from photobooth.core.session import CaptureSession
+
+        dummy_session = CaptureSession(mode="single", target_shot_count=1)
+        shot_path = controller._store.shot_path(dummy_session, 0, "jpg")
+        assert custom_dir in shot_path.parents  # under a %Y-%m-%d subfolder of it
+        assert custom_dir.is_dir()
+    finally:
+        data = controller.getSettingsJson()
+        data["storage"]["photos_dir"] = original
+        controller.saveSettingsJson(data)
+        _pump(0.3)
+
+
 def test_settings_close_and_save_buttons_are_in_opposite_corners(running_app):
     """Close belongs top-right with breathing room from the edge, Save
     belongs bottom-right with breathing room from the edge -- floating
