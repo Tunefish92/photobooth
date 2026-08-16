@@ -19,7 +19,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication, QUrl
+from PySide6.QtCore import QCoreApplication, QMetaObject, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
@@ -278,6 +278,140 @@ def test_exit_button_and_confirmation_dialog_exist_on_idle_screen(running_app):
     exit_confirm.setProperty("visible", False)
     _pump(0.2)
     assert controller.state == "idle", "opening/closing the confirm dialog must not change app state"
+
+
+def test_tapping_a_mode_tile_shows_confirm_screen_without_starting(running_app):
+    """Change request: tapping a mode tile no longer starts a session
+    immediately -- it shows a confirmation screen titled with the selected
+    mode, with a Start button. Confirm selecting a mode leaves the state
+    machine in "idle" (not started yet) and reveals that screen with the
+    right title."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+    assert controller.state == "idle"
+
+    confirm_screen = root.findChild(QQuickItem, "modeConfirmScreen")
+    assert confirm_screen is not None
+    assert confirm_screen.property("visible") is False
+
+    controller.selectMode("grid")
+    _pump(0.3)
+
+    assert controller.state == "idle", "selecting a mode must not start the session yet"
+    assert controller.property("selectedMode") == "grid"
+    assert confirm_screen.property("visible") is True
+
+    title = root.findChild(QQuickItem, "modeConfirmTitle")
+    assert title is not None
+    assert title.property("text") == "Grid"
+
+    controller.cancelModeSelection()
+    _pump(0.2)
+
+
+def test_mode_confirm_back_button_returns_to_the_tile_grid(running_app):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    controller.selectMode("gif")
+    _pump(0.3)
+    assert controller.property("selectedMode") == "gif"
+
+    back_button = root.findChild(QQuickItem, "modeConfirmBackButton")
+    assert back_button is not None
+    assert QMetaObject.invokeMethod(back_button, "clicked")
+    _pump(0.3)
+
+    assert controller.property("selectedMode") == ""
+    assert controller.state == "idle"
+    confirm_screen = root.findChild(QQuickItem, "modeConfirmScreen")
+    assert confirm_screen.property("visible") is False
+
+
+def test_pressing_the_start_button_starts_the_selected_mode(running_app):
+    """The actual "check that it starts the selected mode when the button
+    is pressed" requirement -- invokes the real QML Button.clicked signal
+    (not just calling App.start() directly) so this exercises the same
+    onClicked wiring a real tap would."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    controller.selectMode("boomerang")
+    _pump(0.3)
+
+    start_button = root.findChild(QQuickItem, "modeConfirmStartButton")
+    assert start_button is not None
+    assert QMetaObject.invokeMethod(start_button, "clicked")
+    _pump(0.3)
+
+    assert controller.state == "greeter"
+    assert controller._sm.session is not None
+    assert controller._sm.session.mode == "boomerang"
+
+    # Let the flow return to idle so this test doesn't leak a live session
+    # into whichever test runs next against the same shared app.
+    controller.hardReset()
+    _pump(0.3)
+
+
+def test_gpio_trigger_starts_the_selected_mode_when_one_is_pending(running_app):
+    """Change request: the GPIO trigger pin is equivalent to the on-screen
+    Start button -- while the confirm screen is showing, pressing the
+    physical trigger button starts the *selected* mode, not flow.
+    default_mode."""
+    _app, engine, controller, _warnings = running_app
+
+    default_mode = controller.getSettingsJson()["flow"]["default_mode"]
+    other_mode = "grid" if default_mode != "grid" else "gif"
+
+    controller.selectMode(other_mode)
+    _pump(0.2)
+
+    controller._on_gpio_trigger()
+    _pump(0.3)
+
+    assert controller.state == "greeter"
+    assert controller._sm.session.mode == other_mode
+
+    controller.hardReset()
+    _pump(0.3)
+
+
+def test_gpio_trigger_falls_back_to_default_mode_with_no_selection(running_app):
+    _app, engine, controller, _warnings = running_app
+    assert controller.property("selectedMode") == ""
+
+    default_mode = controller.getSettingsJson()["flow"]["default_mode"]
+
+    controller._on_gpio_trigger()
+    _pump(0.3)
+
+    assert controller.state == "greeter"
+    assert controller._sm.session.mode == default_mode
+
+    controller.hardReset()
+    _pump(0.3)
+
+
+def test_selected_mode_resets_when_a_session_returns_to_idle(running_app):
+    """Regression test: _selected_mode must not survive back to a fresh
+    idle screen (e.g. after finishing/aborting a session) -- otherwise the
+    confirm screen would reappear instead of the tile grid."""
+    _app, engine, controller, _warnings = running_app
+
+    controller.selectMode("single")
+    _pump(0.2)
+    assert controller.property("selectedMode") == "single"
+
+    controller._on_gpio_trigger()
+    _pump(0.2)
+    assert controller.state == "greeter"
+
+    controller.hardReset()
+    _pump(0.3)
+
+    assert controller.state == "idle"
+    assert controller.property("selectedMode") == ""
 
 
 def test_settings_language_selector_offers_only_en_and_de(running_app):

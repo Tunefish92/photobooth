@@ -123,5 +123,6 @@
   "error.title": "Something went wrong",
   "error.retry": "Try again",
   "error.abort": "Back to start",
-  "common.back": "Back"
+  "common.back": "Back",
+  "common.start": "Start"
 }

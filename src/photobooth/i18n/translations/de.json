@@ -123,5 +123,6 @@
   "error.title": "Etwas ist schiefgelaufen",
   "error.retry": "Erneut versuchen",
   "error.abort": "Zurück zum Start",
-  "common.back": "Zurück"
+  "common.back": "Zurück",
+  "common.start": "Starten"
 }

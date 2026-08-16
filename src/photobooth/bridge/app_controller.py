@@ -77,6 +77,7 @@ class AppController(QObject):
     postprocessBusyChanged = Signal()
     configChanged = Signal()
     updateInfoChanged = Signal()
+    selectedModeChanged = Signal()
     toast = Signal(str)
 
     _request_capture = Signal()
@@ -90,6 +91,12 @@ class AppController(QObject):
         self._preview_provider = PreviewImageProvider()
         self._preview_frame_id = 0
         self._camera_ready = False
+        # Mode tapped on the idle screen, awaiting confirmation on the
+        # "start this mode?" screen -- "" means still showing the tile
+        # grid. Reset to "" on every fresh arrival at IDLE (see
+        # _on_state_changed) so a completed/aborted session never leaves
+        # the confirm screen stuck open.
+        self._selected_mode = ""
 
         self._db = PhotoDatabase(paths.database_file())
         self._store = SessionStore(paths.photos_dir(settings.storage.photos_dir), settings.storage)
@@ -218,6 +225,9 @@ class AppController(QObject):
             self._gpio.lamp_off()
             self._idle_light_timer.start()
             self._refresh_slideshow()
+            if self._selected_mode:
+                self._selected_mode = ""
+                self.selectedModeChanged.emit()
         elif state is State.ERROR:
             self._error_message = self._sm.error_message
             self._gpio.rgb_off()
@@ -267,7 +277,11 @@ class AppController(QObject):
         self._sm.raise_error(f"Capture failed: {message}")
 
     def _on_gpio_trigger(self) -> None:
-        self.start(self._settings.flow.default_mode, self._settings.effects.default_filter)
+        # On the "start this mode?" confirmation screen, the physical
+        # trigger button acts as that screen's Start button (the selected
+        # mode); otherwise it's a shortcut straight to the default mode.
+        mode = self._selected_mode or self._settings.flow.default_mode
+        self.start(mode, self._settings.effects.default_filter)
 
     # -- processing -----------------------------------------------------------
     def _run_processing(self) -> None:
@@ -466,6 +480,25 @@ class AppController(QObject):
         self.toast.emit(self.translator.tr("settings.update.failed"))
 
     # -- flow control, invoked from QML ------------------------------------
+    @Slot(str)
+    def selectMode(self, mode: str) -> None:
+        """Idle-screen tile tapped: show the "start this mode?" screen
+        rather than starting immediately. Ignored for a mode that isn't
+        actually enabled (defensive; the idle screen only offers enabled
+        ones) so a stale/tampered call can't select something with no
+        tile."""
+        if self._sm.state != State.IDLE or mode not in self._settings.flow.enabled_modes:
+            return
+        self._selected_mode = mode
+        self.selectedModeChanged.emit()
+
+    @Slot()
+    def cancelModeSelection(self) -> None:
+        if not self._selected_mode:
+            return
+        self._selected_mode = ""
+        self.selectedModeChanged.emit()
+
     @Slot(str, str)
     def start(self, mode: str, filter_name: str = "none") -> None:
         if self._sm.state != State.IDLE:
@@ -505,13 +538,26 @@ class AppController(QObject):
 
     @Slot()
     def hardReset(self) -> None:
+        """Force the state machine back to IDLE from wherever it is. Not
+        part of the normal user-facing flow -- nothing in the UI calls
+        this -- it's a guaranteed escape hatch the test suite uses to
+        reset shared app state between tests, so every state needs a real
+        path back to IDLE here, not just the ones a human would hit
+        (GREETER/COUNTDOWN/CAPTURE/PROCESSING/REVIEW have no direct exit
+        of their own, so those go through the same raise_error+abort
+        detour ERROR recovery already uses)."""
         state = self._sm.state
+        if state == State.IDLE:
+            return
         if state == State.SETTINGS:
             self._sm.exit_settings()
-        elif state == State.ERROR:
-            self._sm.abort()
         elif state == State.POSTPROCESS:
             self._sm.finish()
+        elif state == State.ERROR:
+            self._sm.abort()
+        else:
+            self._sm.raise_error("hardReset")
+            self._sm.abort()
 
     @Slot(str, result=bool)
     def enterSettings(self, pin: str) -> bool:
@@ -601,6 +647,10 @@ class AppController(QObject):
     @Property(list, notify=configChanged)
     def enabledModes(self) -> list[str]:
         return list(self._settings.flow.enabled_modes)
+
+    @Property(str, notify=selectedModeChanged)
+    def selectedMode(self) -> str:
+        return self._selected_mode
 
     @Property(list, notify=configChanged)
     def enabledFilters(self) -> list[str]:
