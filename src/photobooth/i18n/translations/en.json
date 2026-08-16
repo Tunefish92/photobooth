@@ -66,6 +66,8 @@
   "settings.field.theme": "Theme",
   "settings.field.fullscreen": "Fullscreen (restart required)",
   "settings.field.hide_cursor": "Hide cursor",
+  "settings.field.auto_restart": "Restart automatically after exit or crash",
+  "settings.field.auto_restart_hint": "Applies on the Pi kiosk from the next exit onward (no restart needed to change it, but it won't undo the current session). Turn off to leave the kiosk closed after using Exit, instead of it immediately relaunching.",
   "settings.field.admin_pin": "Admin PIN",
   "settings.field.photos_dir": "Photo directory",
   "settings.field.photos_dir_placeholder": "Default location",

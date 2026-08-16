@@ -65,13 +65,22 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   (e.g. a mounted USB drive) to store photos under instead of the default
   app-data location. This repurposes `StorageConfig`'s old `data_dir`
   field, which existed but was never actually read anywhere.
+- New "Restart automatically after exit or crash" toggle in Settings ->
+  General. `scripts/run-kiosk.sh`'s restart loop couldn't previously be
+  turned off -- exiting via the on-screen Exit button just relaunched the
+  kiosk again a couple seconds later, with no way to actually leave it
+  closed. Unlike every other setting on this screen it applies
+  immediately (no Save needed): it leaves/removes a sentinel file the
+  wrapper script checks after the app process has already exited, so it
+  takes effect from the next exit onward rather than the current session.
 - Tapping a mode tile on the idle screen no longer starts a session
   immediately -- it opens a confirmation screen titled with the selected
   mode (with that mode's icon) and a Start button, with a Back button to
   return to the tile grid. The physical GPIO trigger button is equivalent
-  to that Start button while the confirmation screen is showing (it
-  starts the selected mode, not `flow.default_mode`); with no mode
-  selected it's unchanged, a direct shortcut to the default mode.
+  to that Start button while the confirmation screen is showing; from the
+  idle tile grid (no mode selected yet) it does nothing (see GPIO below --
+  this replaced an earlier "shortcut straight to `flow.default_mode`"
+  behavior, which turned out not to be wanted).
 - Finishing a session normally (Done on the postprocess screen) now
   returns to that same mode's confirmation screen instead of the tile
   grid -- one tap for another round of the same mode, the common case at
@@ -89,6 +98,10 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   hardware init just logs and continues), so every GPIO feature (trigger
   button, exit button, lamp, RGB LED) did nothing, with no visible error
   anywhere in the UI.
+
+- The GPIO trigger button no longer has a "no mode selected" fallback to
+  `flow.default_mode` -- it now only acts as the confirmation screen's
+  Start button, and does nothing at all from the idle tile grid.
 
 - Hardened `GpioConfig` against two previously-silent misconfigurations:
   pins outside the 40-pin header's usable BCM2-27 range (0/1 are reserved

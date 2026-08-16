@@ -66,6 +66,8 @@
   "settings.field.theme": "Design",
   "settings.field.fullscreen": "Vollbild (Neustart erforderlich)",
   "settings.field.hide_cursor": "Cursor ausblenden",
+  "settings.field.auto_restart": "Nach Beenden oder Absturz automatisch neu starten",
+  "settings.field.auto_restart_hint": "Gilt auf dem Pi-Kiosk ab dem nächsten Beenden (kein Neustart nötig, um das zu ändern, wirkt aber nicht auf die laufende Sitzung). Ausschalten, damit der Kiosk nach \"Beenden\" geschlossen bleibt, statt sofort neu zu starten.",
   "settings.field.admin_pin": "Admin-PIN",
   "settings.field.photos_dir": "Fotoverzeichnis",
   "settings.field.photos_dir_placeholder": "Standardspeicherort",
