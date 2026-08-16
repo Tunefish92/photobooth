@@ -54,7 +54,11 @@ apt-get install -y \
     curl git
 
 echo "==> Adding $TARGET_USER to hardware groups"
-usermod -aG video,render,plugdev,lp,lpadmin "$TARGET_USER"
+# "gpio" matters most here: Raspberry Pi OS's udev rules grant /dev/gpiomem
+# (what lgpio/gpiozero open) to that group specifically, not video/render.
+# Without it, GpioController's hardware init fails and is silently
+# swallowed (a broad except, so GPIO just never works -- no visible error).
+usermod -aG video,render,plugdev,lp,lpadmin,gpio "$TARGET_USER"
 
 # Installed and run as $TARGET_USER (not root) throughout this block --
 # this whole script runs under `sudo`, so a plain `curl | sh` / `uv sync`

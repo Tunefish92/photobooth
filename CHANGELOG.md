@@ -72,8 +72,23 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   to that Start button while the confirmation screen is showing (it
   starts the selected mode, not `flow.default_mode`); with no mode
   selected it's unchanged, a direct shortcut to the default mode.
+- Finishing a session normally (Done on the postprocess screen) now
+  returns to that same mode's confirmation screen instead of the tile
+  grid -- one tap for another round of the same mode, the common case at
+  a live event. An aborted/errored session still falls through to the
+  tile grid, and Retake was never affected (it goes straight back to the
+  countdown for another attempt at the same session, never touching the
+  idle screen at all).
 
 ### GPIO
+
+- **Fixed GPIO not working at all** on a fresh `install.sh` provision:
+  the target user was never added to the `gpio` group, which Raspberry
+  Pi OS's udev rules require for `/dev/gpiomem` access -- `gpiozero`
+  silently failed to initialize (a broad exception handler around
+  hardware init just logs and continues), so every GPIO feature (trigger
+  button, exit button, lamp, RGB LED) did nothing, with no visible error
+  anywhere in the UI.
 
 - Hardened `GpioConfig` against two previously-silent misconfigurations:
   pins outside the 40-pin header's usable BCM2-27 range (0/1 are reserved
