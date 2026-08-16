@@ -61,6 +61,17 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   Blue, Forest Green, and Prism Modern (a bold, saturated magenta/violet/
   cyan look, in contrast to the other themes' restrained pastel accents).
   Takes effect on Save, same as the language setting.
+- New "Photo directory" field in Settings -> General: an absolute path
+  (e.g. a mounted USB drive) to store photos under instead of the default
+  app-data location. This repurposes `StorageConfig`'s old `data_dir`
+  field, which existed but was never actually read anywhere.
+- Tapping a mode tile on the idle screen no longer starts a session
+  immediately -- it opens a confirmation screen titled with the selected
+  mode (with that mode's icon) and a Start button, with a Back button to
+  return to the tile grid. The physical GPIO trigger button is equivalent
+  to that Start button while the confirmation screen is showing (it
+  starts the selected mode, not `flow.default_mode`); with no mode
+  selected it's unchanged, a direct shortcut to the default mode.
 
 ### GPIO
 

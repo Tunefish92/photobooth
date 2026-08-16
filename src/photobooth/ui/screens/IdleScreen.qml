@@ -73,7 +73,10 @@ Item {
         onClicked: exitConfirm.visible = true
     }
 
+    // -- mode picker: tap a tile, then confirm on the screen below --------
     Column {
+        id: modePicker
+        visible: App.selectedMode === ""
         anchors.centerIn: parent
         spacing: Theme.spaceXl
 
@@ -107,8 +110,60 @@ Item {
                 delegate: ModeTile {
                     mode: modelData
                     label: Translator.tr("idle.mode." + modelData)
-                    onActivated: App.start(modelData, App.defaultFilter)
+                    onActivated: App.selectMode(modelData)
                 }
+            }
+        }
+    }
+
+    // -- mode confirmation: shown after a tile is tapped -------------------
+    // Title is the selected mode; Start begins that mode (the on-screen
+    // button and the GPIO trigger pin are equivalent here -- see
+    // AppController._on_gpio_trigger).
+    Column {
+        id: modeConfirm
+        objectName: "modeConfirmScreen"
+        visible: App.selectedMode !== ""
+        anchors.centerIn: parent
+        spacing: Theme.spaceXl
+
+        Item {
+            width: 96
+            height: 96
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            CameraIcon { anchors.fill: parent; color: Theme.accentC; visible: App.selectedMode === "single" }
+            GridIcon { anchors.fill: parent; color: Theme.accentC; visible: App.selectedMode === "grid" }
+            FilmIcon { anchors.fill: parent; color: Theme.accentC; visible: App.selectedMode === "gif" }
+            RepeatIcon { anchors.fill: parent; color: Theme.accentC; visible: App.selectedMode === "boomerang" }
+        }
+
+        Text {
+            objectName: "modeConfirmTitle"
+            text: App.selectedMode !== "" ? Translator.tr("idle.mode." + App.selectedMode) : ""
+            color: Theme.textPrimary
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.sizeDisplay
+            font.weight: Font.Bold
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
+        Column {
+            spacing: Theme.spaceMd
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            PrimaryButton {
+                objectName: "modeConfirmStartButton"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Translator.tr("common.start")
+                onClicked: App.start(App.selectedMode, App.defaultFilter)
+            }
+            PrimaryButton {
+                objectName: "modeConfirmBackButton"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Translator.tr("common.back")
+                outlined: true
+                onClicked: App.cancelModeSelection()
             }
         }
     }
