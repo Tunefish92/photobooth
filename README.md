@@ -198,7 +198,8 @@ src/photobooth/
 ├── core/            State machine + capture session, deliberately Qt-free
 ├── camera/          Camera backends (gphoto2, picamera2, opencv, dummy)
 ├── printing/        Printer backends (CUPS, PDF fallback)
-├── sharing/         Email, WebDAV, USB export
+├── sharing/         Email, WebDAV
+├── backup/          Whole-library USB backup (device UUID, incremental copy)
 ├── imaging/         Grid compositing, filters, chroma key, GIF/boomerang
 ├── hardware/        GPIO controller
 ├── storage/         SQLite index + on-disk photo storage
