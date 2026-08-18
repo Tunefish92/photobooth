@@ -2,6 +2,53 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-08-18
+
+### UI
+
+- Replaced the remaining settings nav-rail Unicode glyphs (gear, play,
+  circle, printer, arrow, power, grid, repeat symbols) with hand-drawn
+  vector icons -- the same class of fix already applied to the idle screen
+  and the gear/exit/close icons in v1.0.0. Font glyph ink isn't reliably
+  centered within its own character cell, and how far off varies by symbol
+  and font, which made the nav rail look vertically jagged row to row.
+  Added three new icons (Photo Modes, Printer, Sharing) and reused existing
+  ones (General, Camera, Layout, Update, GPIO) where they already fit.
+
+### Backup (new)
+
+- New Settings -> Backup tab, replacing per-photo USB export
+  ("Save to USB" on the postprocess screen, `UsbExportConfig`): copies
+  every photo folder under the configured photo directory plus a
+  consistent SQLite snapshot (via `sqlite3`'s own backup API, not a raw
+  file copy -- the database can be open and being written to by the
+  running app) onto a selected removable drive.
+  - **Incremental**: a file already on the drive with a matching size and
+    an as-new-or-newer mtime is left alone, so repeat backups (especially
+    the scheduled automatic ones) only copy what's actually new.
+  - **A kind of versioning**: each run appends one line to a JSON-lines
+    manifest on the drive (timestamp, files copied/skipped, bytes) --
+    lightweight backup history without the complexity, or FAT32/exFAT
+    incompatibility (most USB sticks are formatted one of those, and
+    neither supports hardlinks), of true per-run snapshots.
+  - **The device is remembered by filesystem UUID, not mount path** --
+    Raspberry Pi OS mounts removable drives under `/media/<user>/<label>`,
+    a path that changes with the label or which USB port it's in. Picking
+    a drive in Settings resolves and stores its UUID (via
+    `/dev/disk/by-uuid`); backups later re-resolve wherever that UUID is
+    *currently* mounted, so a replug or reboot doesn't lose track of which
+    physical drive was chosen.
+  - **Manual or scheduled**: a "Backup now" button, plus an optional
+    auto-backup interval (5/10/15/30 minutes or 1 hour) run by its own
+    timer independent of whatever the kiosk is doing.
+
+### Tests
+
+- Added coverage for the backup module: device UUID resolution surviving a
+  simulated replug, incremental copy skip/recopy behavior, the SQLite
+  snapshot being a real independent copy, and the full async round-trip
+  through `backupNow()`.
+
 ## [1.0.0] - 2026-08-15
 
 First stable release. Everything below shipped since v0.1.0 (Beta), driven
@@ -121,35 +168,6 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
   TLS handshake and fails on port 465. Now uses `SMTP_SSL` for that case.
 - Audited WebDAV's request handling -- already correct, no changes
   needed.
-- **Removed per-photo USB export** ("Save to USB" on the postprocess
-  screen, `UsbExportConfig`) in favor of the whole-library Backup feature
-  below, which supersedes it.
-
-### Backup (new)
-
-- New Settings -> Backup tab, replacing per-photo USB export: copies
-  every photo folder under the configured photo directory plus a
-  consistent SQLite snapshot (via `sqlite3`'s own backup API, not a raw
-  file copy -- the database can be open and being written to by the
-  running app) onto a selected removable drive.
-  - **Incremental**: a file already on the drive with a matching size and
-    an as-new-or-newer mtime is left alone, so repeat backups (especially
-    the scheduled automatic ones) only copy what's actually new.
-  - **A kind of versioning**: each run appends one line to a JSON-lines
-    manifest on the drive (timestamp, files copied/skipped, bytes) --
-    lightweight backup history without the complexity, or FAT32/exFAT
-    incompatibility (most USB sticks are formatted one of those, and
-    neither supports hardlinks), of true per-run snapshots.
-  - **The device is remembered by filesystem UUID, not mount path** --
-    Raspberry Pi OS mounts removable drives under `/media/<user>/<label>`,
-    a path that changes with the label or which USB port it's in. Picking
-    a drive in Settings resolves and stores its UUID (via
-    `/dev/disk/by-uuid`); backups later re-resolve wherever that UUID is
-    *currently* mounted, so a replug or reboot doesn't lose track of which
-    physical drive was chosen.
-  - **Manual or scheduled**: a "Backup now" button, plus an optional
-    auto-backup interval (5/10/15/30 minutes or 1 hour) run by its own
-    timer independent of whatever the kiosk is doing.
 
 ### Dev tooling
 
@@ -160,13 +178,10 @@ largely by provisioning a real Pi 4 end-to-end for the first time.
 - Added coverage that didn't exist before: the email and WebDAV sharing
   backends (mocked `smtplib`/`httpx`, no live server needed), GPIO pin
   range/uniqueness validation, the theme system end-to-end (selecting and
-  saving a theme actually changes the live `Theme` singleton), a
+  saving a theme actually changes the live `Theme` singleton), and a
   catalog-wide sweep confirming every `Translator.tr()` call site across
   every `.qml` file resolves in both languages (not just Settings screen
-  fields, which was the only thing previously checked), and the backup
-  module (device UUID resolution surviving a simulated replug, incremental
-  copy skip/recopy behavior, the SQLite snapshot being a real independent
-  copy, and the full async round-trip through `backupNow()`).
+  fields, which was the only thing previously checked).
 
 ## [0.1.0] - 2026-08-12 (Beta)
 
