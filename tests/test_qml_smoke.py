@@ -21,7 +21,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QUrl
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickItem
 
 from photobooth.bridge.app_controller import AppController
@@ -1057,6 +1057,47 @@ def test_backup_tab_fields_exist(running_app):
     ]
 
     controller.exitSettings()
+
+
+def test_settings_nav_icons_are_vector_not_unicode_glyphs(running_app):
+    """Regression test: the settings nav rail originally used raw Unicode
+    glyphs (gear/play/circle/etc.) whose visible ink isn't reliably centered
+    within its character cell -- how far off varies by font/platform, which
+    made the rail look vertically jagged row to row (see GearIcon.qml's own
+    comment on this). Every entry now maps through navIconComponents to a
+    hand-drawn Canvas icon instead, keyed by a plain-word sentinel rather
+    than the glyph itself.
+
+    This checks the *data model* (sections + navIconComponents) rather than
+    searching the live item tree for rendered Canvas instances: the nav
+    rail's Repeater lives inside a ColumnLayout, and delegate items created
+    by a Repeater nested in a Qt Quick Layout render correctly on screen but
+    are not reachable via QQuickItem.findChildren() from an ancestor in
+    this PySide6/Qt build (confirmed directly -- Repeater.itemAt() returns
+    None for every index despite the row painting fine), so that approach
+    can't reliably assert anything about this Repeater's contents.
+    """
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    sections = settings_root.property("sections").toVariant()
+    nav_icon_components = settings_root.property("navIconComponents").toVariant()
+
+    assert len(sections) == 9
+    for entry in sections:
+        icon_key = entry["icon"]
+        assert icon_key.isascii() and icon_key.isalpha(), f"non-vector icon key: {icon_key!r}"
+        assert icon_key in nav_icon_components, f"no icon component registered for {icon_key!r}"
+        component = nav_icon_components[icon_key]
+        assert component.status() != QQmlComponent.Status.Error, component.errorString()
+
+    controller.exitSettings()
+    _pump(0.3)
     _pump(0.3)
 
 
