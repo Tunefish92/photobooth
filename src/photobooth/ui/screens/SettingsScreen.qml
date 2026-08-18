@@ -31,17 +31,43 @@ Item {
     readonly property bool wide: width >= 900
     readonly property real navWidth: wide ? Math.min(240, width * 0.22) : 88
 
+    // Icon values are sentinel keys into navIconComponents below, not glyphs
+    // -- see GearIcon.qml for why every nav icon here is a hand-drawn Canvas
+    // rather than a Unicode symbol (font ink isn't reliably centered in its
+    // cell, which made the nav rail look vertically misaligned row to row).
     readonly property var sections: [
-        { icon: "⚙", label: Translator.tr("settings.tab.general") },
-        { icon: "▶", label: Translator.tr("settings.tab.modes") },
-        { icon: "◎", label: Translator.tr("settings.tab.camera") },
-        { icon: "⎙", label: Translator.tr("settings.tab.printer") },
-        { icon: "↗", label: Translator.tr("settings.tab.sharing") },
-        { icon: "⏻", label: Translator.tr("settings.tab.gpio") },
-        { icon: "▦", label: Translator.tr("settings.tab.layout") },
-        { icon: "↻", label: Translator.tr("settings.tab.update") },
-        { icon: "⏏", label: Translator.tr("settings.tab.backup") }
+        { icon: "gear", label: Translator.tr("settings.tab.general") },
+        { icon: "modes", label: Translator.tr("settings.tab.modes") },
+        { icon: "camera", label: Translator.tr("settings.tab.camera") },
+        { icon: "printer", label: Translator.tr("settings.tab.printer") },
+        { icon: "sharing", label: Translator.tr("settings.tab.sharing") },
+        { icon: "gpio", label: Translator.tr("settings.tab.gpio") },
+        { icon: "grid", label: Translator.tr("settings.tab.layout") },
+        { icon: "repeat", label: Translator.tr("settings.tab.update") },
+        { icon: "backup", label: Translator.tr("settings.tab.backup") }
     ]
+
+    readonly property var navIconComponents: ({
+        "gear": gearIconComponent,
+        "modes": modesIconComponent,
+        "camera": cameraIconComponent,
+        "printer": printerIconComponent,
+        "sharing": sharingIconComponent,
+        "gpio": gpioIconComponent,
+        "grid": gridIconComponent,
+        "repeat": repeatIconComponent,
+        "backup": backupIconComponent
+    })
+
+    Component { id: gearIconComponent; GearIcon {} }
+    Component { id: modesIconComponent; ModesIcon {} }
+    Component { id: cameraIconComponent; CameraIcon {} }
+    Component { id: printerIconComponent; PrinterIcon {} }
+    Component { id: sharingIconComponent; SharingIcon {} }
+    Component { id: gpioIconComponent; PowerIcon {} }
+    Component { id: gridIconComponent; GridIcon {} }
+    Component { id: repeatIconComponent; RepeatIcon {} }
+    Component { id: backupIconComponent; BackupIcon {} }
 
     readonly property var allModes: ["single", "grid", "gif", "boomerang"]
 
@@ -201,11 +227,18 @@ Item {
 
                         Item { Layout.fillWidth: !root.wide; Layout.preferredWidth: root.wide ? 0 : 1 }
 
-                        Text {
-                            text: modelData.icon
-                            font.pixelSize: 22
-                            color: navCard.selected ? Theme.accentA : Theme.textSecondary
+                        Loader {
+                            id: navIcon
+                            Layout.preferredWidth: 22
+                            Layout.preferredHeight: 22
                             Layout.alignment: Qt.AlignVCenter
+                            sourceComponent: root.navIconComponents[modelData.icon]
+                            Binding {
+                                target: navIcon.item
+                                property: "color"
+                                value: navCard.selected ? Theme.accentA : Theme.textSecondary
+                                when: navIcon.item !== null
+                            }
                         }
                         Text {
                             visible: root.wide
