@@ -359,6 +359,49 @@ def test_pressing_the_start_button_starts_the_selected_mode(running_app):
     _pump(0.3)
 
 
+def test_review_screen_shows_a_live_countdown_and_auto_advances(running_app):
+    """Change request: the review screen ("Retake"/"Looks great!") should
+    show a live seconds counter for when it auto-advances to postprocess,
+    instead of that timeout being invisible. Shrinks flow.display_time_s
+    so this doesn't need to wait out the real (6s) default."""
+    from photobooth.core.session import CaptureSession
+    from photobooth.core.state_machine import State
+
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    data = controller.getSettingsJson()
+    original_display_time_s = data["flow"]["display_time_s"]
+    try:
+        data["flow"]["display_time_s"] = 0.4
+        controller.saveSettingsJson(data)
+        _pump(0.2)
+
+        controller._sm._session = CaptureSession(mode="single", target_shot_count=1)
+        controller._sm._transition(State.REVIEW)
+        _pump(0.3)
+
+        assert controller.state == "review"
+        assert controller.property("reviewSecondsRemaining") == 1
+
+        review_counter = root.findChild(QQuickItem, "reviewSecondsText")
+        assert review_counter is not None
+        assert review_counter.property("text") == "1"
+
+        deadline = time.monotonic() + 3
+        while controller.state != "postprocess" and time.monotonic() < deadline:
+            _pump(0.05)
+
+        assert controller.state == "postprocess"
+        assert controller.property("reviewSecondsRemaining") == 0
+    finally:
+        data = controller.getSettingsJson()
+        data["flow"]["display_time_s"] = original_display_time_s
+        controller.saveSettingsJson(data)
+        controller.hardReset()
+        _pump(0.2)
+
+
 def test_gpio_trigger_starts_the_selected_mode_when_one_is_pending(running_app):
     """Change request: the GPIO trigger pin is equivalent to the on-screen
     Start button -- while the confirm screen is showing, pressing the
