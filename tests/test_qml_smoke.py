@@ -68,7 +68,11 @@ def running_app(tmp_path_factory):
     updater_patcher.start()
 
     settings = load_settings(None)
-    app = QGuiApplication([])
+    # Only one QGuiApplication/QCoreApplication can exist per process, and
+    # other test modules (e.g. test_background.py) may have already made
+    # one when the whole suite runs together -- reuse it instead of
+    # constructing a second one, which raises at the C++ level.
+    app = QGuiApplication.instance() or QGuiApplication([])
     translator = Translator(settings.app.language)
     controller = AppController(settings, translator)
 
