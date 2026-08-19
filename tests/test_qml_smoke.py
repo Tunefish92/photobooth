@@ -401,8 +401,9 @@ def test_selected_mode_resets_on_a_hard_reset_back_to_idle(running_app):
     abort path -- used for e.g. camera/capture errors) must not leave
     _selected_mode pointing at a mode that just failed, landing the guest
     straight back on that same failing confirm screen. It should fall
-    through to the tile grid instead -- same destination Done reaches on
-    a normal finish, see test_done_returns_to_the_tile_grid below.
+    through to the tile grid instead. (Contrast the *normal* finish path,
+    Done on the postprocess screen, which deliberately does the opposite
+    -- see test_done_returns_to_the_selected_modes_confirm_screen below.)
     """
     _app, engine, controller, _warnings = running_app
 
@@ -421,16 +422,15 @@ def test_selected_mode_resets_on_a_hard_reset_back_to_idle(running_app):
     assert controller.property("selectedMode") == ""
 
 
-def test_done_returns_to_the_tile_grid(running_app):
+def test_done_returns_to_the_selected_modes_confirm_screen(running_app):
     """Change request: after a session finishes normally (Done on the
-    postprocess screen), the guest lands back on the idle tile grid, not
-    back on the mode's confirm screen -- an earlier revision of this
-    feature auto-reselected the mode instead, but that was reverted; a
-    completed session should not put the guest one tap away from
-    unintentionally starting another one. (Retake is unaffected either
-    way: it goes straight back to GREETER for another attempt at the same
-    session, per PhotoboothStateMachine.retake(), and never touches IDLE/
-    _selected_mode at all.)
+    postprocess screen), the guest should land back on that same mode's
+    confirm screen -- never the tile grid -- so repeat rounds of the same
+    mode stay there indefinitely; the only way back to the tile grid is
+    the confirm screen's explicit Back button. (Retake doesn't need a
+    corresponding fix: it goes straight back to GREETER for another
+    attempt at the same session, per PhotoboothStateMachine.retake(), and
+    never touches IDLE/_selected_mode at all.)
 
     Drives the state machine directly into POSTPROCESS rather than
     through a real capture -- that would race the AppController's actual
@@ -450,6 +450,48 @@ def test_done_returns_to_the_tile_grid(running_app):
     controller._sm._transition(State.POSTPROCESS)
     _pump(0.1)
     assert controller.state == "postprocess"
+
+    controller.done()
+    _pump(0.3)
+
+    assert controller.state == "idle"
+    assert controller.property("selectedMode") == "single"
+
+    # A second round behaves the same way -- it doesn't fall through to
+    # the tile grid after the first repeat either.
+    controller._sm._session = CaptureSession(mode="single", target_shot_count=1)
+    controller._sm._transition(State.POSTPROCESS)
+    _pump(0.1)
+    controller.done()
+    _pump(0.3)
+
+    assert controller.state == "idle"
+    assert controller.property("selectedMode") == "single"
+
+    # Already idle, so hardReset() (a transition-triggered side effect)
+    # would be a no-op here -- cancelModeSelection() is the direct way
+    # back to the tile grid, same as tapping the confirm screen's Back
+    # button.
+    controller.cancelModeSelection()
+    _pump(0.2)
+    assert controller.property("selectedMode") == ""
+
+
+def test_done_falls_through_to_the_tile_grid_when_reached_via_gpio_shortcut(running_app):
+    """The GPIO-trigger-with-nothing-selected shortcut (straight to
+    flow.default_mode, see _on_gpio_trigger) never sets _selected_mode --
+    confirm Done in that case still lands on the tile grid, not some
+    mode's confirm screen it was never actually shown."""
+    from photobooth.core.session import CaptureSession
+    from photobooth.core.state_machine import State
+
+    _app, engine, controller, _warnings = running_app
+    assert controller.property("selectedMode") == ""
+
+    default_mode = controller.getSettingsJson()["flow"]["default_mode"]
+    controller._sm._session = CaptureSession(mode=default_mode, target_shot_count=1)
+    controller._sm._transition(State.POSTPROCESS)
+    _pump(0.1)
 
     controller.done()
     _pump(0.3)
