@@ -26,6 +26,11 @@ Item {
     property int previewSizeY: 2362
     property int previewMargin: 40
 
+    // Same reason: the backup device list's selection highlight and
+    // "not saved yet" warning need to react live to a tap, which mutating
+    // settingsData.backup.device_uuid alone won't trigger.
+    property string previewBackupDeviceUuid: ""
+
     // Responsive breakpoint: below this the nav rail collapses to icons only
     // and field grids stack into a single column instead of label|control.
     readonly property bool wide: width >= 900
@@ -105,6 +110,9 @@ Item {
             previewSizeX = settingsData.layout.size_x
             previewSizeY = settingsData.layout.size_y
             previewMargin = settingsData.layout.inner_dist_x
+        }
+        if (settingsData.backup) {
+            previewBackupDeviceUuid = settingsData.backup.device_uuid
         }
     }
 
@@ -1093,6 +1101,7 @@ Item {
                         // -- Backup ---------------------------------------------------
                         ColumnLayout {
                             id: backupPage
+                            objectName: "backupPage"
                             width: stack.width
                             spacing: Theme.spaceMd
 
@@ -1151,7 +1160,7 @@ Item {
                                 color: Theme.textPrimary
                             }
                             Text {
-                                visible: root.settingsData.backup && root.settingsData.backup.device_uuid !== App.backupDeviceUuid
+                                visible: root.previewBackupDeviceUuid !== App.backupDeviceUuid
                                 text: Translator.tr("settings.field.backup_device_unsaved")
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -1186,7 +1195,7 @@ Item {
                                 Repeater {
                                     model: backupPage.foundDevices
                                     delegate: Rectangle {
-                                        readonly property bool selected: root.settingsData.backup && root.settingsData.backup.device_uuid === modelData.uuid
+                                        readonly property bool selected: root.previewBackupDeviceUuid === modelData.uuid
                                         width: backupPage.width
                                         height: 52
                                         radius: Theme.radiusSm
@@ -1210,6 +1219,7 @@ Item {
                                             onClicked: {
                                                 root.settingsData.backup.device_uuid = modelData.uuid
                                                 root.settingsData.backup.device_label = modelData.label
+                                                root.previewBackupDeviceUuid = modelData.uuid
                                             }
                                         }
                                     }
