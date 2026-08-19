@@ -596,21 +596,9 @@ class AppController(QObject):
     def done(self) -> None:
         if self._sm.state != State.POSTPROCESS:
             return
-        # _selected_mode is untouched for the whole GREETER..POSTPROCESS
-        # run (only the IDLE entry below clears it), so it's still the
-        # mode this session just used.
-        mode = self._selected_mode
+        # Always lands back on the idle tile grid -- finish()'s IDLE
+        # transition clears _selected_mode (see _on_state_changed).
         self._sm.finish()
-        # finish()'s IDLE transition just cleared _selected_mode (see
-        # _on_state_changed) -- reselect it so the guest lands back on
-        # that mode's confirm screen, not the tile grid. One tap away
-        # from another round of the same mode, the common case at a live
-        # event where one mode runs for the whole session. A mode
-        # reached via the GPIO shortcut with nothing selected (mode ==
-        # "") correctly falls through to the tile grid instead.
-        if mode:
-            self._selected_mode = mode
-            self.selectedModeChanged.emit()
 
     @Slot()
     def retryError(self) -> None:
