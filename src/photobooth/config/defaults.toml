@@ -42,7 +42,6 @@ show_preview = true
 greeter_time_s = 3
 countdown_time_s = 3
 display_time_s = 6
-postprocess_time_s = 60
 # "single", "grid", "gif", "boomerang"
 default_mode = "single"
 enabled_modes = ["single", "grid", "gif", "boomerang"]
