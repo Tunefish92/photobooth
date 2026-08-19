@@ -41,15 +41,14 @@ Item {
                 font.weight: Font.Bold
             }
 
-            Grid {
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                columns: 2
                 spacing: Theme.spaceMd
 
                 PrimaryButton {
                     visible: App.printerEnabled
                     text: Translator.tr("postprocess.print")
-                    minWidth: 260
+                    minWidth: 220
                     enabled: !App.postprocessBusy
                     onClicked: {
                         if (App.printConfirmation) {
@@ -63,7 +62,7 @@ Item {
                     visible: App.mailerEnabled
                     text: Translator.tr("postprocess.email")
                     outlined: true
-                    minWidth: 260
+                    minWidth: 220
                     enabled: !App.postprocessBusy
                     onClicked: App.requestEmail()
                 }
@@ -71,21 +70,17 @@ Item {
                     visible: App.webdavEnabled
                     text: Translator.tr("postprocess.webdav")
                     outlined: true
-                    minWidth: 260
+                    minWidth: 220
                     enabled: !App.postprocessBusy
                     onClicked: App.requestWebdavUpload()
                 }
-            }
-
-            Item { width: 1; height: Theme.spaceMd }
-
-            PrimaryButton {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Translator.tr("postprocess.done")
-                danger: false
-                outlined: true
-                minWidth: 260
-                onClicked: App.done()
+                PrimaryButton {
+                    text: Translator.tr("postprocess.done")
+                    danger: false
+                    outlined: true
+                    minWidth: 220
+                    onClicked: App.done()
+                }
             }
         }
     }
