@@ -19,6 +19,7 @@ from photobooth.camera.base import CameraBackend
 logger = logging.getLogger(__name__)
 
 _PREVIEW_INTERVAL_MS = 66  # ~15 fps, plenty smooth for a countdown preview
+_BATTERY_POLL_INTERVAL_MS = 30_000  # slow-changing, no need to hammer the camera
 
 
 class CameraWorker(QObject):
@@ -26,12 +27,14 @@ class CameraWorker(QObject):
     capture_ready = Signal(bytes, str)
     capture_failed = Signal(str)
     ready = Signal(bool)  # True if a real camera was found, False if dummy fallback
+    battery_level_changed = Signal(int)  # 0-100, or -1 if unknown/unsupported
 
     def __init__(self, backend_factory: Callable[[], CameraBackend]) -> None:
         super().__init__()
         self._backend_factory = backend_factory
         self._backend: CameraBackend | None = None
         self._timer: QTimer | None = None
+        self._battery_timer: QTimer | None = None
 
     @Slot()
     def start(self) -> None:
@@ -43,12 +46,29 @@ class CameraWorker(QObject):
         if self._backend.has_preview:
             self._timer.start()
 
+        self._battery_timer = QTimer()
+        self._battery_timer.setInterval(_BATTERY_POLL_INTERVAL_MS)
+        self._battery_timer.timeout.connect(self._poll_battery)
+        self._battery_timer.start()
+        self._poll_battery()
+
     @Slot()
     def stop(self) -> None:
         if self._timer is not None:
             self._timer.stop()
+        if self._battery_timer is not None:
+            self._battery_timer.stop()
         if self._backend is not None:
             self._backend.close()
+
+    def _poll_battery(self) -> None:
+        assert self._backend is not None
+        try:
+            level = self._backend.battery_level()
+        except Exception:
+            logger.exception("Battery level check failed")
+            level = None
+        self.battery_level_changed.emit(level if level is not None else -1)
 
     def _emit_preview(self) -> None:
         assert self._backend is not None

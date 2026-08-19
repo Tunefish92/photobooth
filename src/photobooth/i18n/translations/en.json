@@ -74,6 +74,7 @@
   "settings.field.mirror_preview": "Mirror preview",
   "settings.field.usb_index": "USB webcam index",
   "settings.field.inter_shot_delay": "Wait between shots (s)",
+  "settings.field.camera_battery": "Camera battery",
   "settings.field.enable_printing": "Enable printing",
   "settings.field.printer_backend": "Backend",
   "settings.field.cups_name": "CUPS printer name",

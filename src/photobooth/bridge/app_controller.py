@@ -74,6 +74,7 @@ class AppController(QObject):
     resultChanged = Signal()
     errorChanged = Signal()
     cameraReadyChanged = Signal()
+    cameraBatteryChanged = Signal()
     previewFrameIdChanged = Signal()
     slideshowChanged = Signal()
     postprocessBusyChanged = Signal()
@@ -114,6 +115,7 @@ class AppController(QObject):
 
         self._result_url = ""
         self._error_message = ""
+        self._camera_battery_level = -1
         self._countdown_value = 0
         self._countdown_remaining = 0.0
         self._countdown_total = 0.0
@@ -163,6 +165,7 @@ class AppController(QObject):
         self._camera_worker.capture_ready.connect(self._on_capture_ready)
         self._camera_worker.capture_failed.connect(self._on_capture_failed)
         self._camera_worker.ready.connect(self._on_camera_ready)
+        self._camera_worker.battery_level_changed.connect(self._on_battery_level)
         self._request_capture.connect(self._camera_worker.do_capture)
         self._request_camera_stop.connect(self._camera_worker.stop)
         self._camera_thread.start()
@@ -281,6 +284,11 @@ class AppController(QObject):
     def _on_camera_ready(self, is_real: bool) -> None:
         self._camera_ready = is_real
         self.cameraReadyChanged.emit()
+
+    def _on_battery_level(self, level: int) -> None:
+        if level != self._camera_battery_level:
+            self._camera_battery_level = level
+            self.cameraBatteryChanged.emit()
 
     def _on_capture_ready(self, data: bytes, extension: str) -> None:
         session = self._sm.session
@@ -731,6 +739,12 @@ class AppController(QObject):
     @Property(bool, notify=cameraReadyChanged)
     def cameraReady(self) -> bool:
         return self._camera_ready
+
+    @Property(int, notify=cameraBatteryChanged)
+    def cameraBatteryLevel(self) -> int:
+        """0-100, or -1 if unknown (unsupported camera/backend, or not
+        polled yet)."""
+        return self._camera_battery_level
 
     @Property(int, notify=previewFrameIdChanged)
     def previewFrameId(self) -> int:

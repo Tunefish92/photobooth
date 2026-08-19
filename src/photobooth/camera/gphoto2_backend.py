@@ -7,6 +7,7 @@ list) since it only relies on the generic capture/preview/file-transfer API.
 from __future__ import annotations
 
 import io
+import re
 
 from PIL import Image
 
@@ -53,6 +54,23 @@ class Gphoto2Backend(CameraBackend):
         raw = bytes(camera_file.get_data_and_size())
         image = Image.open(io.BytesIO(raw)).convert("RGB")
         return Frame(rgb_bytes=image.tobytes(), width=image.width, height=image.height)
+
+    def battery_level(self) -> int | None:
+        """Reads the "batterylevel" config widget PTP exposes on most Canon/
+        Nikon bodies (under /main/status in `gphoto2 --get-config`). Not
+        every model/vendor exposes this, and the value's shape varies (a
+        plain "75", "75%", or a non-numeric state like "Powered" for an AC
+        adapter) -- treated as "unknown" rather than raised, same as any
+        other camera capability query that might not be supported."""
+        assert self._camera is not None and self._gp is not None
+        try:
+            config = self._camera.get_config()
+            widget = config.get_child_by_name("batterylevel")
+            raw = str(widget.get_value()).strip()
+        except self._gp.GPhoto2Error:
+            return None
+        match = re.match(r"(\d+)", raw)
+        return int(match.group(1)) if match else None
 
     def capture(self) -> Capture:
         assert self._camera is not None and self._gp is not None

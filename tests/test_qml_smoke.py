@@ -1026,6 +1026,32 @@ def test_camera_inter_shot_delay_field_exists_and_is_editable(running_app):
     _pump(0.3)
 
 
+def test_camera_battery_row_is_hidden_when_the_backend_has_no_battery(running_app):
+    """The dummy/opencv/picamera2 backends have no battery of their own
+    (CameraBackend.battery_level() defaults to None -> cameraBatteryLevel
+    == -1) -- confirms the Settings -> Camera row stays hidden rather than
+    showing a misleading "-1%" or "0%"."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    assert controller.property("cameraBatteryLevel") == -1
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 2)  # Camera tab
+    _pump(0.3)
+
+    battery_text = root.findChild(QQuickItem, "cameraBatteryText")
+    assert battery_text is not None
+    assert battery_text.property("visible") is False
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
 def test_photos_dir_field_exists_in_general_tab_and_is_editable(running_app):
     _app, engine, controller, _warnings = running_app
     root = engine.rootObjects()[0]

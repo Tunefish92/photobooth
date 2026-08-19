@@ -520,6 +520,20 @@ Item {
                                 value: root.settingsData.camera ? Math.round(root.settingsData.camera.inter_shot_delay_s) : 1
                                 onValueModified: root.settingsData.camera.inter_shot_delay_s = value
                             }
+
+                            Label {
+                                visible: App.cameraBatteryLevel >= 0
+                                text: Translator.tr("settings.field.camera_battery")
+                                color: Theme.textSecondary
+                            }
+                            Text {
+                                objectName: "cameraBatteryText"
+                                visible: App.cameraBatteryLevel >= 0
+                                text: App.cameraBatteryLevel + "%"
+                                color: Theme.textPrimary
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 22
+                            }
                         }
 
                         // -- Printer ---------------------------------------------------
