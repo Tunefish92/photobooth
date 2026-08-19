@@ -47,6 +47,12 @@ class CameraBackend(ABC):
         """Return the latest low-latency preview frame, or None if unavailable."""
         return None
 
+    def battery_level(self) -> int | None:
+        """Battery percentage (0-100), or None if the camera/backend doesn't
+        expose one -- AC-powered, an unsupported model, or a backend that
+        isn't battery-powered at all (webcam, Pi camera module)."""
+        return None
+
     @abstractmethod
     def capture(self) -> Capture:
         """Trigger a full-resolution still capture and return the original bytes."""

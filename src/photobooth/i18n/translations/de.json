@@ -74,6 +74,7 @@
   "settings.field.mirror_preview": "Vorschau spiegeln",
   "settings.field.usb_index": "USB-Webcam-Index",
   "settings.field.inter_shot_delay": "Wartezeit zwischen Aufnahmen (s)",
+  "settings.field.camera_battery": "Kamera-Akku",
   "settings.field.enable_printing": "Drucken aktivieren",
   "settings.field.printer_backend": "Backend",
   "settings.field.cups_name": "CUPS-Druckername",
