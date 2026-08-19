@@ -42,6 +42,7 @@ Item {
             }
 
             Grid {
+                anchors.horizontalCenter: parent.horizontalCenter
                 columns: 2
                 spacing: Theme.spaceMd
 
@@ -79,9 +80,11 @@ Item {
             Item { width: 1; height: Theme.spaceMd }
 
             PrimaryButton {
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: Translator.tr("postprocess.done")
                 danger: false
                 outlined: true
+                minWidth: 260
                 onClicked: App.done()
             }
         }
