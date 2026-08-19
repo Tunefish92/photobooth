@@ -19,10 +19,11 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QUrl
+from PySide6.QtCore import QCoreApplication, QMetaObject, QPoint, Qt, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickItem
+from PySide6.QtTest import QTest
 
 from photobooth.bridge.app_controller import AppController
 from photobooth.config.settings import load_settings
@@ -1071,6 +1072,62 @@ def test_backup_tab_fields_exist(running_app):
     assert list(combo.property("model")) == [
         "Off (manual only)", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour",
     ]
+
+
+def test_tapping_a_backup_device_row_selects_it(running_app):
+    """Regression test: tapping a device in the scanned list wrote
+    settingsData.backup.device_uuid directly, but settingsData is a plain
+    JS object (see the NOTE on that property) -- mutating a field inside
+    it doesn't trigger binding re-evaluation, so the row's selection
+    highlight and the "not saved yet" warning never updated. Reported
+    live as "the selection of the drive does not work". Fixed via a
+    previewBackupDeviceUuid mirror property, same pattern already used
+    for the layout margin preview.
+
+    Clicks at a fixed pixel position rather than looking up the delegate
+    Rectangle via findChildren()/Repeater.itemAt() -- confirmed neither
+    reliably locates this Repeater's dynamically created items in this
+    PySide6/Qt build even though they render correctly (same quirk noted
+    in test_settings_nav_icons_are_vector_not_unicode_glyphs above, and
+    true here too despite this Repeater living in a plain Column rather
+    than a Layout).
+    """
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 8)
+    _pump(0.3)
+
+    backup_page = root.findChild(QQuickItem, "backupPage")
+    try:
+        backup_page.setProperty(
+            "foundDevices",
+            [
+                {"uuid": "uuid-1", "label": "SANDISK", "mount_path": "/media/pi/SANDISK"},
+                {"uuid": "uuid-2", "label": "KINGSTON", "mount_path": "/media/pi/KINGSTON"},
+            ],
+        )
+        _pump(1.0)
+        assert settings_root.property("previewBackupDeviceUuid") == ""
+
+        # Second row (KINGSTON) at 1280x800, read off a screenshot of this
+        # exact fixture setup -- the layout is fixed/top-anchored here, not
+        # responsive to window height.
+        QTest.mouseClick(root, Qt.LeftButton, Qt.NoModifier, QPoint(500, 611))
+        _pump(0.5)
+
+        assert settings_root.property("previewBackupDeviceUuid") == "uuid-2"
+        assert settings_root.property("settingsData")["backup"]["device_uuid"] == "uuid-2"
+        assert settings_root.property("settingsData")["backup"]["device_label"] == "KINGSTON"
+    finally:
+        backup_page.setProperty("foundDevices", [])
+        controller.exitSettings()
+        _pump(0.3)
 
     controller.exitSettings()
 
