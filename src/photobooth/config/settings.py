@@ -92,7 +92,6 @@ class FlowConfig(BaseModel):
     greeter_time_s: float = Field(default=3, ge=0)
     countdown_time_s: float = Field(default=3, ge=0)
     display_time_s: float = Field(default=6, ge=0)
-    postprocess_time_s: float = Field(default=60, ge=0)
     default_mode: CaptureMode = "single"
     enabled_modes: list[CaptureMode] = Field(
         default_factory=lambda: ["single", "grid", "gif", "boomerang"]

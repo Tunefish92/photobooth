@@ -137,7 +137,7 @@ def test_camera_config_rejects_negative_inter_shot_delay():
 
 
 @pytest.mark.parametrize(
-    "field", ["greeter_time_s", "countdown_time_s", "display_time_s", "postprocess_time_s"]
+    "field", ["greeter_time_s", "countdown_time_s", "display_time_s"]
 )
 def test_flow_config_rejects_negative_durations(field):
     FlowConfig(**{field: 0})  # instant/skip is valid

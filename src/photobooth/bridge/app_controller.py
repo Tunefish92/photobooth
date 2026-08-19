@@ -141,15 +141,12 @@ class AppController(QObject):
         self._countdown_timer.timeout.connect(self._on_countdown_tick)
         self._review_timer = self._make_timer(single_shot=True)
         self._review_timer.timeout.connect(self._sm_confirm)
-        self._postprocess_timer = self._make_timer(single_shot=True)
-        self._postprocess_timer.timeout.connect(self._sm_finish)
         self._idle_light_timer = self._make_timer(interval_ms=100)
         self._idle_light_timer.timeout.connect(self._tick_idle_light)
         self._scoped_timers = (
             self._greeter_timer,
             self._countdown_timer,
             self._review_timer,
-            self._postprocess_timer,
             self._idle_light_timer,
         )
 
@@ -205,9 +202,6 @@ class AppController(QObject):
     def _sm_confirm(self) -> None:
         self._sm.confirm()
 
-    def _sm_finish(self) -> None:
-        self._sm.finish()
-
     def _on_state_changed(self, state: State) -> None:
         for timer in self._scoped_timers:
             timer.stop()
@@ -232,8 +226,6 @@ class AppController(QObject):
             self._run_processing()
         elif state is State.REVIEW:
             self._review_timer.start(int(self._settings.flow.display_time_s * 1000))
-        elif state is State.POSTPROCESS:
-            self._postprocess_timer.start(int(self._settings.flow.postprocess_time_s * 1000))
         elif state is State.IDLE:
             self._gpio.lamp_off()
             self._idle_light_timer.start()
