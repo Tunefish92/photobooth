@@ -1,6 +1,6 @@
 {
   "idle.title": "Photobooth",
-  "idle.tap_to_start": "Touch anywhere to start",
+  "idle.tap_to_start": "Select mode below",
   "idle.mode.single": "Photo",
   "idle.mode.grid": "Grid",
   "idle.mode.gif": "GIF",
