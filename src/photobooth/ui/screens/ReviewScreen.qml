@@ -38,6 +38,15 @@ Item {
             }
         }
 
+        Text {
+            objectName: "reviewSecondsText"
+            text: App.reviewSecondsRemaining
+            color: Theme.textSecondary
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.sizeCaption
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
         Row {
             spacing: Theme.spaceMd
             anchors.horizontalCenter: parent.horizontalCenter

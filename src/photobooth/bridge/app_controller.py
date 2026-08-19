@@ -69,6 +69,7 @@ def _shrink(image: Image.Image, max_width: int) -> Image.Image:
 class AppController(QObject):
     stateChanged = Signal()
     countdownChanged = Signal()
+    reviewSecondsChanged = Signal()
     shotsChanged = Signal()
     resultChanged = Signal()
     errorChanged = Signal()
@@ -116,6 +117,8 @@ class AppController(QObject):
         self._countdown_value = 0
         self._countdown_remaining = 0.0
         self._countdown_total = 0.0
+        self._review_seconds_value = 0
+        self._review_seconds_remaining = 0.0
         self._postprocess_busy = False
         self._slideshow: list[str] = []
         self._idle_hue = 0.0
@@ -139,8 +142,8 @@ class AppController(QObject):
         self._greeter_timer.timeout.connect(self._sm_start_countdown)
         self._countdown_timer = self._make_timer(interval_ms=50)
         self._countdown_timer.timeout.connect(self._on_countdown_tick)
-        self._review_timer = self._make_timer(single_shot=True)
-        self._review_timer.timeout.connect(self._sm_confirm)
+        self._review_timer = self._make_timer(interval_ms=50)
+        self._review_timer.timeout.connect(self._on_review_tick)
         self._idle_light_timer = self._make_timer(interval_ms=100)
         self._idle_light_timer.timeout.connect(self._tick_idle_light)
         self._scoped_timers = (
@@ -225,7 +228,10 @@ class AppController(QObject):
             self._gpio.rgb_off()
             self._run_processing()
         elif state is State.REVIEW:
-            self._review_timer.start(int(self._settings.flow.display_time_s * 1000))
+            self._review_seconds_remaining = self._settings.flow.display_time_s
+            self._review_seconds_value = math.ceil(self._review_seconds_remaining)
+            self.reviewSecondsChanged.emit()
+            self._review_timer.start()
         elif state is State.IDLE:
             self._gpio.lamp_off()
             self._idle_light_timer.start()
@@ -255,6 +261,16 @@ class AppController(QObject):
         if self._countdown_remaining <= 0:
             self._countdown_timer.stop()
             self._sm.capture_now()
+
+    def _on_review_tick(self) -> None:
+        self._review_seconds_remaining -= 0.05
+        value = max(0, math.ceil(self._review_seconds_remaining))
+        if value != self._review_seconds_value:
+            self._review_seconds_value = value
+            self.reviewSecondsChanged.emit()
+        if self._review_seconds_remaining <= 0:
+            self._review_timer.stop()
+            self._sm_confirm()
 
     # -- camera signals -----------------------------------------------------
     def _on_frame_ready(self, image: QImage) -> None:
@@ -689,6 +705,10 @@ class AppController(QObject):
     def countdownProgress(self) -> float:
         total = max(self._countdown_total, 0.001)
         return max(0.0, min(1.0, self._countdown_remaining / total))
+
+    @Property(int, notify=reviewSecondsChanged)
+    def reviewSecondsRemaining(self) -> int:
+        return self._review_seconds_value
 
     @Property(int, notify=shotsChanged)
     def shotsTaken(self) -> int:
