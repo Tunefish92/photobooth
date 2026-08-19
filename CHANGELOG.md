@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.2] - 2026-08-19
+
+### Fixed
+
+- Removed the postprocess screen's hidden auto-return-to-idle timeout.
+  Staying on "What would you like to do?" for longer than 60 seconds
+  silently finished the session and dropped the guest back on the tile
+  grid -- there was no UI to even see this setting existed, let alone
+  disable it. The only way off this screen now is an explicit action
+  (Print, Email, Upload, or Done), same as every other screen.
+
+### UI
+
+- Idle screen subtitle changed from "Touch anywhere to start" to "Select
+  mode below" -- more accurate, since tapping the background does
+  nothing; only the mode tiles are interactive.
+
+### Translations
+
+- Audited every user-facing string in the app for translation coverage.
+  No gaps found: every `Translator.tr()` call site across every `.qml`
+  file already resolves in both English and German (enforced by an
+  existing catalog-wide test), and no hardcoded natural-language text
+  bypasses the translator anywhere in the UI.
+
 ## [1.1.1] - 2026-08-19
 
 ### Fixed
