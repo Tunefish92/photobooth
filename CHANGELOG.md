@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.1] - 2026-08-19
+
+### Fixed
+
+- **Background actions (Print, Email, WebDAV upload, Backup) could silently
+  hang or crash the app.** `run_in_background()` started its task on the
+  Qt thread pool but kept no Python reference to it afterward -- it could
+  be garbage-collected while the worker thread was still running or about
+  to deliver its result, either silently dropping the completion signal
+  (busy indicator stuck forever, no confirmation toast) or crashing on a
+  use-after-free from the worker thread. Reported live as: hit Yes on the
+  print confirmation, the app closes. Now holds a reference for the
+  task's whole lifetime, released only once its result has actually been
+  delivered.
+- Settings -> Backup: tapping a device in the scanned list didn't visibly
+  select it. The tap correctly staged the choice, but wrote it into a
+  field of a plain JS object that QML doesn't watch for changes, so
+  neither the row's highlight nor the "not saved yet" warning ever
+  updated -- looked like the click did nothing. Fixed with the same
+  reactive-mirror pattern already used for the layout margin preview.
+- Postprocess screen ("What would you like to do?"): the action buttons
+  (Print/Email/Upload/Done) are now one row, all the same size, centered
+  as a group -- Done used to sit stacked below the others at a different
+  width, both left-aligned.
+
 ## [1.1.0] - 2026-08-18
 
 ### UI
