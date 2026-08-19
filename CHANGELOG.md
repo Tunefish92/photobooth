@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] - 2026-08-19
+
+### UI
+
+- The review screen ("Retake"/"Looks great!") now shows a live seconds
+  counter above the buttons, counting down to when it auto-advances to
+  the postprocess screen -- that timeout previously fired with no visible
+  warning at all.
+
+### Camera
+
+- New "Camera battery" row in Settings -> Camera, where available.
+  `gphoto2` exposes a battery-level PTP config widget on most Canon/Nikon
+  DSLR/mirrorless bodies; the row only appears once a level is actually
+  known, so webcams, the Pi camera module, and gphoto2-supported cameras
+  that don't expose battery status (or are on AC power) just don't show
+  it, rather than displaying a bogus value.
+
 ## [1.1.2] - 2026-08-19
 
 ### Fixed
