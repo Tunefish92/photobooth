@@ -57,6 +57,8 @@ def test_every_settings_field_label_has_a_translation():
         "language", "theme", "fullscreen", "hide_cursor", "admin_pin",
         "auto_restart", "auto_restart_hint",
         "photos_dir", "photos_dir_placeholder", "photos_dir_hint",
+        "system_clock", "system_clock_hint", "clock_set", "clock_setting",
+        "clock_set_ok", "clock_set_failed", "clock_invalid_format",
         "camera_backend", "rotation", "mirror_preview", "usb_index", "inter_shot_delay",
         "camera_battery",
         "enable_printing", "printer_backend", "cups_name", "print_confirmation",
