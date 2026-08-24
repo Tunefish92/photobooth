@@ -52,7 +52,8 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   when it auto-advances to the postprocess screen
 - Filters (B&W, sepia, vintage, vivid) and green-screen chroma key
 - Configurable m×n grid layout with a live preview, custom margins, and
-  custom background/overlay/logo slots
+  custom background/overlay/logo slots (browse-for-file button, filtered
+  to image types, instead of typing the path by hand)
 - Printing via CUPS (Canon SELPHY CP1300/CP1500 out of the box), with a PDF
   debug fallback
 - Email and WebDAV upload sharing (per-photo, from the postprocess screen)
