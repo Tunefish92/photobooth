@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.2] - 2026-08-24
+
+### Layout
+
+- Added a browse button to the background/overlay image path fields
+  (Settings -> Layout, Photo and Grid tabs -- they share the same
+  underlying fields). Opens a native file picker pre-filtered to image
+  types (falls back to "All files"), instead of requiring the path to be
+  typed out by hand.
+
 ## [1.2.1] - 2026-08-24
 
 ### General
