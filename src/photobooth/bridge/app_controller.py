@@ -12,13 +12,14 @@ from __future__ import annotations
 import io
 import logging
 import math
+from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
 from PySide6.QtCore import Property, QCoreApplication, QObject, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QImage
 
-from photobooth import __version__, paths, updater
+from photobooth import __version__, paths, system_clock, updater
 from photobooth.backup import BackupResult, find_removable_devices, run_backup
 from photobooth.bridge.background import run_in_background
 from photobooth.bridge.camera_worker import CameraWorker
@@ -84,6 +85,8 @@ class AppController(QObject):
     autoRestartEnabledChanged = Signal()
     backupBusyChanged = Signal()
     backupStatusChanged = Signal()
+    clockBusyChanged = Signal()
+    clockStatusChanged = Signal()
     toast = Signal(str)
 
     _request_capture = Signal()
@@ -130,6 +133,9 @@ class AppController(QObject):
         self._update_available = False
         self._latest_version = ""
         self._update_error = ""
+
+        self._clock_busy = False
+        self._clock_status = ""
 
         self._backup_busy = False
         self._backup_status = ""
@@ -497,6 +503,43 @@ class AppController(QObject):
         self.backupStatusChanged.emit()
         self.toast.emit(self.translator.tr("backup.failed"))
 
+    # -- system clock, invoked from QML --------------------------------------
+    @Slot(str)
+    def setSystemDateTime(self, value: str) -> None:
+        """`value` is "YYYY-MM-DD HH:MM:SS", as typed into the Settings ->
+        General field."""
+        if self._clock_busy:
+            return
+        try:
+            parsed = datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            self._clock_status = self.translator.tr("settings.field.clock_invalid_format")
+            self.clockStatusChanged.emit()
+            return
+        self._clock_busy = True
+        self.clockBusyChanged.emit()
+        run_in_background(
+            system_clock.set_system_datetime,
+            parsed,
+            on_success=self._on_clock_set_done,
+            on_error=self._on_clock_set_failed,
+        )
+
+    def _on_clock_set_done(self, _result: None) -> None:
+        self._clock_busy = False
+        self._clock_status = self.translator.tr("settings.field.clock_set_ok")
+        self.clockBusyChanged.emit()
+        self.clockStatusChanged.emit()
+        self.toast.emit(self.translator.tr("settings.field.clock_set_ok"))
+
+    def _on_clock_set_failed(self, message: str) -> None:
+        logger.warning("Setting the system clock failed: %s", message)
+        self._clock_busy = False
+        self._clock_status = message
+        self.clockBusyChanged.emit()
+        self.clockStatusChanged.emit()
+        self.toast.emit(self.translator.tr("settings.field.clock_set_failed"))
+
     # -- update check/apply, invoked from QML --------------------------------
     @Slot()
     def checkForUpdates(self) -> None:
@@ -777,6 +820,22 @@ class AppController(QObject):
     @Property(str, notify=backupStatusChanged)
     def backupStatus(self) -> str:
         return self._backup_status
+
+    @Property(bool, notify=clockBusyChanged)
+    def clockBusy(self) -> bool:
+        return self._clock_busy
+
+    @Property(str, notify=clockStatusChanged)
+    def clockStatus(self) -> str:
+        return self._clock_status
+
+    @Property(str)
+    def currentSystemDateTime(self) -> str:
+        """Not notify-wired -- QML re-reads this explicitly (a Timer tick,
+        or entering the tab) rather than binding to it, since a live
+        per-second Qt property-changed signal would be pure overhead for a
+        value nothing else needs to react to."""
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     @Property(list, notify=configChanged)
     def enabledFilters(self) -> list[str]:

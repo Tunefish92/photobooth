@@ -404,6 +404,51 @@ Item {
                                 font.pixelSize: Theme.sizeCaption
                                 color: Theme.textSecondary
                             }
+
+                            Label { text: Translator.tr("settings.field.system_clock"); color: Theme.textSecondary }
+                            WideText {
+                                id: systemClockField
+                                objectName: "settingsSystemClockField"
+                                // Initialized once from the current system time when
+                                // this field is created -- currentSystemDateTime has
+                                // no notify signal, so QML evaluates this binding once
+                                // and never again, leaving whatever the guest types
+                                // afterward alone instead of snapping it back.
+                                text: App.currentSystemDateTime
+                            }
+
+                            RowLayout {
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                spacing: Theme.spaceMd
+
+                                PrimaryButton {
+                                    objectName: "settingsSystemClockSetButton"
+                                    text: Translator.tr("settings.field.clock_set")
+                                    outlined: true
+                                    enabled: !App.clockBusy
+                                    onClicked: App.setSystemDateTime(systemClockField.text)
+                                }
+                            }
+                            Text {
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                text: Translator.tr("settings.field.system_clock_hint")
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
+                            }
+                            Text {
+                                objectName: "settingsClockStatusText"
+                                Layout.columnSpan: root.wide ? 2 : 1
+                                visible: App.clockBusy || App.clockStatus !== ""
+                                text: App.clockBusy ? Translator.tr("settings.field.clock_setting") : App.clockStatus
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.sizeCaption
+                                color: Theme.textSecondary
+                            }
                         }
 
                         // -- Photo Modes ------------------------------------------------

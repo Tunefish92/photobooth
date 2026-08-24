@@ -1072,6 +1072,59 @@ def test_photos_dir_field_exists_in_general_tab_and_is_editable(running_app):
     _pump(0.3)
 
 
+def test_system_clock_field_is_prefilled_and_set_button_reports_status(running_app):
+    """New feature: Settings -> General -> System date & time. The field
+    is pre-filled with the current system time; the button drives the
+    same real async round-trip (run_in_background -> QThreadPool ->
+    finished/failed back on the main thread) as backup/print/email, via
+    App.setSystemDateTime()."""
+    import re
+
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 0)  # General tab
+    _pump(0.3)
+
+    field = root.findChild(QQuickItem, "settingsSystemClockField")
+    assert field is not None
+    assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", field.property("text"))
+
+    set_button = root.findChild(QQuickItem, "settingsSystemClockSetButton")
+    assert set_button is not None
+
+    # Invalid input -> the synchronous validation-error path, no async
+    # round trip.
+    controller.setSystemDateTime("garbage")
+    _pump(0.1)
+    assert controller.property("clockBusy") is False
+    assert "Invalid format" in controller.property("clockStatus")
+
+    # Valid input -> the real async round trip. This dev machine isn't
+    # Linux, so it's expected to fail via system_clock's platform check --
+    # that resolves synchronously (no real I/O), so there's nothing
+    # meaningful to assert about the busy flag mid-flight, just that it
+    # ends up back at False with some status set, proving the round trip
+    # actually completed rather than hanging (the exact bug
+    # run_in_background had before it was fixed).
+    controller.setSystemDateTime("2026-08-24 12:00:00")
+
+    deadline = time.monotonic() + 5
+    while controller.property("clockBusy") and time.monotonic() < deadline:
+        _pump(0.1)
+
+    assert controller.property("clockBusy") is False
+    assert controller.property("clockStatus") != ""
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
 def test_auto_restart_switch_exists_and_toggling_it_writes_the_marker_file(running_app):
     """New feature: Settings -> General -> "Restart automatically after
     exit or crash" toggle. Unlike every other field here it applies
