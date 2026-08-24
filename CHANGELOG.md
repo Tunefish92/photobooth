@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.3] - 2026-08-24
+
+### Fixed
+
+- Postprocess screen ("What would you like to do?"): the title and
+  action buttons were top-anchored, sitting flush against the top of the
+  page instead of level with the middle of the photo preview beside
+  them. Now vertically centered in their column.
+
 ## [1.2.2] - 2026-08-24
 
 ### Layout
