@@ -28,58 +28,63 @@ Item {
             }
         }
 
-        Column {
+        Item {
             width: parent.width - parent.width * 0.42 - Theme.spaceXl
             height: parent.height
-            spacing: Theme.spaceLg
 
-            Text {
-                text: Translator.tr("postprocess.title")
-                color: Theme.textPrimary
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.sizeH1
-                font.weight: Font.Bold
-            }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                spacing: Theme.spaceLg
 
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: Theme.spaceMd
+                Text {
+                    text: Translator.tr("postprocess.title")
+                    color: Theme.textPrimary
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.sizeH1
+                    font.weight: Font.Bold
+                }
 
-                PrimaryButton {
-                    visible: App.printerEnabled
-                    text: Translator.tr("postprocess.print")
-                    minWidth: 220
-                    enabled: !App.postprocessBusy
-                    onClicked: {
-                        if (App.printConfirmation) {
-                            printConfirm.visible = true
-                        } else {
-                            App.requestPrint()
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Theme.spaceMd
+
+                    PrimaryButton {
+                        visible: App.printerEnabled
+                        text: Translator.tr("postprocess.print")
+                        minWidth: 220
+                        enabled: !App.postprocessBusy
+                        onClicked: {
+                            if (App.printConfirmation) {
+                                printConfirm.visible = true
+                            } else {
+                                App.requestPrint()
+                            }
                         }
                     }
-                }
-                PrimaryButton {
-                    visible: App.mailerEnabled
-                    text: Translator.tr("postprocess.email")
-                    outlined: true
-                    minWidth: 220
-                    enabled: !App.postprocessBusy
-                    onClicked: App.requestEmail()
-                }
-                PrimaryButton {
-                    visible: App.webdavEnabled
-                    text: Translator.tr("postprocess.webdav")
-                    outlined: true
-                    minWidth: 220
-                    enabled: !App.postprocessBusy
-                    onClicked: App.requestWebdavUpload()
-                }
-                PrimaryButton {
-                    text: Translator.tr("postprocess.done")
-                    danger: false
-                    outlined: true
-                    minWidth: 220
-                    onClicked: App.done()
+                    PrimaryButton {
+                        visible: App.mailerEnabled
+                        text: Translator.tr("postprocess.email")
+                        outlined: true
+                        minWidth: 220
+                        enabled: !App.postprocessBusy
+                        onClicked: App.requestEmail()
+                    }
+                    PrimaryButton {
+                        visible: App.webdavEnabled
+                        text: Translator.tr("postprocess.webdav")
+                        outlined: true
+                        minWidth: 220
+                        enabled: !App.postprocessBusy
+                        onClicked: App.requestWebdavUpload()
+                    }
+                    PrimaryButton {
+                        text: Translator.tr("postprocess.done")
+                        danger: false
+                        outlined: true
+                        minWidth: 220
+                        onClicked: App.done()
+                    }
                 }
             }
         }
