@@ -721,6 +721,15 @@ class AppController(QObject):
     def getSettingsJson(self):
         return self._settings.model_dump(mode="json")
 
+    @Slot(QUrl, result=str)
+    def urlToLocalPath(self, url: QUrl) -> str:
+        """FileDialog.selectedFile (QML) is a file:// URL -- QUrl.toLocalFile()
+        is the correct, already-tested way to turn that into a plain
+        filesystem path (handling the file:///C:/... vs file:///home/...
+        difference and percent-encoding), rather than reimplementing it
+        with regex in QML."""
+        return url.toLocalFile()
+
     @Slot("QVariant")
     def saveSettingsJson(self, data) -> None:
         try:
