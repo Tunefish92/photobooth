@@ -1,6 +1,6 @@
 [project]
 name = "photobooth"
-version = "1.2.0"
+version = "1.2.1"
 description = "Modern native photobooth application for Raspberry Pi 4"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -43,9 +43,13 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   finishing a session (Done) returns to that same mode's confirmation
   screen rather than the tile grid, ready for another round
 - Camera backends: Canon DSLR (gphoto2), Raspberry Pi Camera Module
-  (picamera2), USB webcam (OpenCV), and a dummy backend for development
+  (picamera2), USB webcam (OpenCV), and a dummy backend for development.
+  Battery level is shown in Settings -> Camera where the camera exposes it
+  (most gphoto2-supported DSLR/mirrorless bodies)
 - Live preview during countdown, animated on-screen countdown ring, with a
   separately configurable delay between shots in multi-shot sessions
+- Review screen (Retake / "Looks great!") shows a live seconds counter for
+  when it auto-advances to the postprocess screen
 - Filters (B&W, sepia, vintage, vivid) and green-screen chroma key
 - Configurable m×n grid layout with a live preview, custom margins, and
   custom background/overlay/logo slots
@@ -66,6 +70,8 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   bold, saturated Prism Modern
 - Configurable photo storage directory (e.g. a mounted USB drive) instead
   of the default app-data location
+- View and set the system clock (Settings -> General) via systemd's
+  `timedatectl` -- useful for an offline kiosk with no network time source
 - Whole-library backup to a USB drive (Settings -> Backup): copies every
   photo folder plus a consistent SQLite snapshot, incrementally (repeat
   runs only copy what's new) with a small history log of each run. The

@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.1] - 2026-08-24
+
+### General
+
+- New Settings -> General entry to view and set the system clock. The
+  field is pre-filled with the current time, edited as plain
+  "YYYY-MM-DD HH:MM:SS" text, and applied via a "Set clock" button.
+  Implemented through systemd's `timedatectl` (Linux only). Setting it
+  first disables NTP sync -- `timedatectl` refuses a manual set while
+  automatic sync is active -- and leaves it off afterward, since a
+  manual correction means the venue doesn't trust (or doesn't have)
+  reliable network time. Works without a password prompt on the kiosk
+  because systemd-timedated's polkit policy grants
+  `org.freedesktop.timedate1.set-time`/`set-ntp` to any active local
+  session, which the kiosk's auto-login desktop session is.
+
 ## [1.2.0] - 2026-08-19
 
 ### UI
