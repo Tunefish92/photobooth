@@ -850,14 +850,18 @@ Item {
                                         }
                                     }
                                     Label { text: Translator.tr("settings.field.background_path"); color: Theme.textSecondary }
-                                    WideText {
-                                        text: root.settingsData.layout ? root.settingsData.layout.background : ""
-                                        onEditingFinished: root.settingsData.layout.background = text
+                                    ImagePathField {
+                                        fieldObjectName: "settingsSingleBackgroundPathField"
+                                        browseObjectName: "settingsSingleBackgroundBrowseButton"
+                                        path: root.settingsData.layout ? root.settingsData.layout.background : ""
+                                        onPathEdited: (value) => root.settingsData.layout.background = value
                                     }
                                     Label { text: Translator.tr("settings.field.overlay_path"); color: Theme.textSecondary }
-                                    WideText {
-                                        text: root.settingsData.layout ? root.settingsData.layout.overlay : ""
-                                        onEditingFinished: root.settingsData.layout.overlay = text
+                                    ImagePathField {
+                                        fieldObjectName: "settingsSingleOverlayPathField"
+                                        browseObjectName: "settingsSingleOverlayBrowseButton"
+                                        path: root.settingsData.layout ? root.settingsData.layout.overlay : ""
+                                        onPathEdited: (value) => root.settingsData.layout.overlay = value
                                     }
                                 }
 
@@ -1013,14 +1017,18 @@ Item {
                                     }
 
                                     Label { text: Translator.tr("settings.field.background_path"); color: Theme.textSecondary }
-                                    WideText {
-                                        text: root.settingsData.layout ? root.settingsData.layout.background : ""
-                                        onEditingFinished: root.settingsData.layout.background = text
+                                    ImagePathField {
+                                        fieldObjectName: "settingsGridBackgroundPathField"
+                                        browseObjectName: "settingsGridBackgroundBrowseButton"
+                                        path: root.settingsData.layout ? root.settingsData.layout.background : ""
+                                        onPathEdited: (value) => root.settingsData.layout.background = value
                                     }
                                     Label { text: Translator.tr("settings.field.overlay_path"); color: Theme.textSecondary }
-                                    WideText {
-                                        text: root.settingsData.layout ? root.settingsData.layout.overlay : ""
-                                        onEditingFinished: root.settingsData.layout.overlay = text
+                                    ImagePathField {
+                                        fieldObjectName: "settingsGridOverlayPathField"
+                                        browseObjectName: "settingsGridOverlayBrowseButton"
+                                        path: root.settingsData.layout ? root.settingsData.layout.overlay : ""
+                                        onPathEdited: (value) => root.settingsData.layout.overlay = value
                                     }
                                 }
 

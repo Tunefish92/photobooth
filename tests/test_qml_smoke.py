@@ -1006,6 +1006,62 @@ def test_layout_tab_has_a_sub_tab_per_capture_mode(running_app):
     _pump(0.3)
 
 
+def test_background_and_overlay_fields_have_a_browse_button(running_app):
+    """New feature: background/overlay image paths (Photo and Grid tabs --
+    they share the same underlying [layout] fields) can now be picked via
+    a native file dialog instead of typed by hand. Confirms the field +
+    browse button exist for both tabs and that typing still stages the
+    path normally -- does NOT click the browse button itself, which would
+    pop a real blocking native OS dialog and hang the test.
+    """
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    admin_pin = controller.getSettingsJson()["admin"]["pin"]
+    assert controller.enterSettings(admin_pin) is True
+    _pump(1.0)
+
+    settings_root = root.findChild(QQuickItem, "settingsRoot")
+    settings_root.setProperty("currentIndex", 6)  # Layout tab
+    _pump(0.3)
+
+    for sub_index, prefix in ((0, "settingsSingle"), (1, "settingsGrid")):
+        settings_root.setProperty("layoutSubIndex", sub_index)
+        _pump(0.3)
+
+        for kind in ("Background", "Overlay"):
+            field = root.findChild(QQuickItem, f"{prefix}{kind}PathField")
+            assert field is not None, f"missing {prefix}{kind}PathField"
+            browse_button = root.findChild(QQuickItem, f"{prefix}{kind}BrowseButton")
+            assert browse_button is not None, f"missing {prefix}{kind}BrowseButton"
+
+    # Typing still works normally (the field/button split didn't break
+    # manual entry) -- edit the Background field on the Photo (single) tab
+    # and confirm it lands in settingsData.layout.background.
+    settings_root.setProperty("layoutSubIndex", 0)
+    _pump(0.2)
+    field = root.findChild(QQuickItem, "settingsSingleBackgroundPathField")
+    field.setProperty("text", "/tmp/hand-typed.png")
+    assert QMetaObject.invokeMethod(field, "editingFinished")
+    _pump(0.2)
+
+    assert settings_root.property("settingsData")["layout"]["background"] == "/tmp/hand-typed.png"
+
+    controller.exitSettings()
+    _pump(0.3)
+
+
+def test_url_to_local_path_converts_a_file_url(running_app):
+    """The browse button's FileDialog hands back a file:// URL --
+    App.urlToLocalPath() (QUrl.toLocalFile() under the hood) is what turns
+    that into the plain path string [layout].background/overlay expect."""
+    from PySide6.QtCore import QUrl
+
+    _app, engine, controller, _warnings = running_app
+
+    assert controller.urlToLocalPath(QUrl("file:///home/pi/Pictures/bg.png")) == "/home/pi/Pictures/bg.png"
+
+
 def test_camera_inter_shot_delay_field_exists_and_is_editable(running_app):
     _app, engine, controller, _warnings = running_app
     root = engine.rootObjects()[0]
