@@ -16,6 +16,7 @@ import time
 from unittest.mock import patch
 
 import pytest
+from PIL import Image as PilImage
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -357,6 +358,202 @@ def test_pressing_the_start_button_starts_the_selected_mode(running_app):
     # into whichever test runs next against the same shared app.
     controller.hardReset()
     _pump(0.3)
+
+
+def _seed_gallery_photos(controller, tmp_path, count: int) -> list:
+    """Writes `count` tiny real JPEGs and records them as 'result' photos in
+    the running controller's own PhotoDatabase, then forces a refresh (the
+    same private method the idle-state transition calls) so
+    App.galleryImages picks them up without needing a full state round
+    trip. Returns the paths, oldest first."""
+    from photobooth.core.session import CaptureSession
+
+    session = CaptureSession(mode="single", target_shot_count=1)
+    controller._db.record_session(session)
+    paths = []
+    for i in range(count):
+        p = tmp_path / f"gallery_{i}.jpg"
+        PilImage.new("RGB", (40, 30), (i * 10, 100, 150)).save(p)
+        controller._db.record_photo(session.id, p, "result")
+        paths.append(p)
+    controller._refresh_gallery()
+    return paths
+
+
+def test_gallery_button_opens_overlay_and_back_button_closes_it(running_app):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+    assert controller.state == "idle"
+
+    overlay = root.findChild(QQuickItem, "galleryOverlay")
+    assert overlay is not None
+    assert overlay.property("visible") is False
+
+    gallery_button = root.findChild(QQuickItem, "galleryButton")
+    assert gallery_button is not None
+    assert QMetaObject.invokeMethod(gallery_button, "clicked")
+    _pump(0.2)
+    assert overlay.property("visible") is True
+
+    back_button = root.findChild(QQuickItem, "galleryBackButton")
+    assert back_button is not None
+    assert QMetaObject.invokeMethod(back_button, "clicked")
+    _pump(0.2)
+    assert overlay.property("visible") is False
+
+
+def test_gallery_empty_state_message_shown_with_no_photos(running_app):
+    """Must run before any other gallery test seeds photos into the shared
+    module-scoped controller's database -- there's no per-test reset of it
+    (only the state machine gets reset between tests), so "empty" is only
+    actually true this early in the file."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+    assert controller.galleryImages == []
+
+    gallery_button = root.findChild(QQuickItem, "galleryButton")
+    assert QMetaObject.invokeMethod(gallery_button, "clicked")
+    _pump(0.2)
+
+    grid = root.findChild(QQuickItem, "galleryGridView")
+    assert grid.property("count") == 0
+
+    back_button = root.findChild(QQuickItem, "galleryBackButton")
+    assert QMetaObject.invokeMethod(back_button, "clicked")
+    _pump(0.2)
+
+
+def test_gallery_grid_shows_every_recorded_photo(running_app, tmp_path):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    _seed_gallery_photos(controller, tmp_path, 3)
+    assert len(controller.galleryImages) == 3
+
+    overlay = root.findChild(QQuickItem, "galleryOverlay")
+    overlay.setProperty("visible", True)
+    _pump(0.3)
+
+    grid = root.findChild(QQuickItem, "galleryGridView")
+    assert grid is not None
+    assert grid.property("count") == 3
+
+    overlay.setProperty("visible", False)
+    _pump(0.2)
+
+
+def test_gallery_detail_view_navigation_and_back_to_grid(running_app, tmp_path):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    _seed_gallery_photos(controller, tmp_path, 3)
+    overlay = root.findChild(QQuickItem, "galleryOverlay")
+    overlay.setProperty("visible", True)
+    _pump(0.2)
+
+    # Repeater/GridView delegates aren't reachable via findChildren (same
+    # caveat as the PIN pad's digit grid elsewhere in this file) -- drive
+    # navigation directly via detailIndex, which is exactly what a tapped
+    # thumbnail's MouseArea does.
+    overlay.setProperty("detailIndex", 0)
+    _pump(0.2)
+
+    prev_button = root.findChild(QQuickItem, "galleryPrevButton")
+    next_button = root.findChild(QQuickItem, "galleryNextButton")
+    assert prev_button.property("visible") is False, "already at the first photo"
+    assert next_button.property("visible") is True
+
+    assert QMetaObject.invokeMethod(next_button, "clicked")
+    _pump(0.2)
+    assert overlay.property("detailIndex") == 1
+    assert prev_button.property("visible") is True
+    assert next_button.property("visible") is True
+
+    assert QMetaObject.invokeMethod(prev_button, "clicked")
+    _pump(0.2)
+    assert overlay.property("detailIndex") == 0
+
+    detail_back = root.findChild(QQuickItem, "galleryDetailBackButton")
+    assert QMetaObject.invokeMethod(detail_back, "clicked")
+    _pump(0.2)
+    assert overlay.property("detailIndex") == -1
+    assert overlay.property("visible") is True, "back from detail stays in the gallery"
+
+    overlay.setProperty("visible", False)
+    _pump(0.2)
+
+
+def test_gallery_closing_the_overlay_resets_detail_index(running_app, tmp_path):
+    """Reopening the gallery after closing it must land on the grid, not
+    wherever the user last left the detail view."""
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    _seed_gallery_photos(controller, tmp_path, 2)
+    overlay = root.findChild(QQuickItem, "galleryOverlay")
+    overlay.setProperty("visible", True)
+    overlay.setProperty("detailIndex", 1)
+    _pump(0.2)
+
+    overlay.setProperty("visible", False)
+    _pump(0.1)
+    overlay.setProperty("visible", True)
+    _pump(0.2)
+
+    assert overlay.property("detailIndex") == -1
+    overlay.setProperty("visible", False)
+    _pump(0.2)
+
+
+def test_gallery_print_button_reprints_the_open_photo(running_app, tmp_path):
+    _app, engine, controller, _warnings = running_app
+    root = engine.rootObjects()[0]
+
+    _seed_gallery_photos(controller, tmp_path, 1)
+    overlay = root.findChild(QQuickItem, "galleryOverlay")
+    overlay.setProperty("visible", True)
+    overlay.setProperty("detailIndex", 0)
+    _pump(0.2)
+
+    print_button = root.findChild(QQuickItem, "galleryPrintButton")
+    assert print_button is not None
+    assert QMetaObject.invokeMethod(print_button, "clicked")
+    _pump(1.0)
+
+    # Real print files go through the PDF fallback backend on this dev
+    # machine (no CUPS) -- postprocessBusy should have come back down once
+    # the background task finished, success or failure either way, and no
+    # QML warnings should have come from the click itself.
+    assert controller.postprocessBusy is False
+
+    overlay.setProperty("visible", False)
+    _pump(0.2)
+
+
+def test_print_gallery_image_is_a_noop_for_a_nonexistent_path(running_app):
+    _app, _engine, controller, _warnings = running_app
+    assert controller.postprocessBusy is False
+
+    controller.printGalleryImage("file:///no/such/photo.jpg")
+    _pump(0.2)
+
+    assert controller.postprocessBusy is False
+
+
+def test_print_gallery_image_ignores_concurrent_calls(running_app, tmp_path):
+    """Tapping Print twice in a row (double-tap on a touchscreen) must not
+    submit the job twice -- printGalleryImage guards on _postprocess_busy,
+    same as the existing requestPrint()/requestEmail() etc."""
+    _app, _engine, controller, _warnings = running_app
+    paths = _seed_gallery_photos(controller, tmp_path, 1)
+    url = QUrl.fromLocalFile(str(paths[0])).toString()
+
+    controller.printGalleryImage(url)
+    assert controller.postprocessBusy is True
+    controller.printGalleryImage(url)  # ignored -- already busy
+
+    _pump(1.0)
+    assert controller.postprocessBusy is False
 
 
 def test_review_screen_shows_a_live_countdown_and_auto_advances(running_app):

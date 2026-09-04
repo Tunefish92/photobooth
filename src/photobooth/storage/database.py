@@ -70,3 +70,12 @@ class PhotoDatabase:
             )
             rows: Iterable[tuple[str]] = cur.fetchall()
         return [Path(row[0]) for row in rows if Path(row[0]).is_file()]
+
+    def all_results(self) -> list[Path]:
+        """Every result photo on record, newest first -- backs the Gallery
+        screen (unlike recent_results, which is capped for the idle-screen
+        slideshow)."""
+        with closing(self._conn.cursor()) as cur:
+            cur.execute("SELECT path FROM photos WHERE kind = 'result' ORDER BY created_at DESC")
+            rows: Iterable[tuple[str]] = cur.fetchall()
+        return [Path(row[0]) for row in rows if Path(row[0]).is_file()]

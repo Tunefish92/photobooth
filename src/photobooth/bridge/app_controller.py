@@ -78,6 +78,7 @@ class AppController(QObject):
     cameraBatteryChanged = Signal()
     previewFrameIdChanged = Signal()
     slideshowChanged = Signal()
+    galleryChanged = Signal()
     postprocessBusyChanged = Signal()
     configChanged = Signal()
     updateInfoChanged = Signal()
@@ -126,6 +127,7 @@ class AppController(QObject):
         self._review_seconds_remaining = 0.0
         self._postprocess_busy = False
         self._slideshow: list[str] = []
+        self._gallery: list[str] = []
         self._idle_hue = 0.0
 
         self._update_checking = False
@@ -245,6 +247,7 @@ class AppController(QObject):
             self._gpio.lamp_off()
             self._idle_light_timer.start()
             self._refresh_slideshow()
+            self._refresh_gallery()
             if self._selected_mode:
                 self._selected_mode = ""
                 self.selectedModeChanged.emit()
@@ -389,6 +392,12 @@ class AppController(QObject):
         ]
         self.slideshowChanged.emit()
 
+    def _refresh_gallery(self) -> None:
+        self._gallery = [
+            QUrl.fromLocalFile(str(p)).toString() for p in self._db.all_results()
+        ]
+        self.galleryChanged.emit()
+
     # -- postprocess actions -----------------------------------------------
     def _set_busy(self, busy: bool) -> None:
         self._postprocess_busy = busy
@@ -412,6 +421,24 @@ class AppController(QObject):
         run_in_background(
             self._printer.print_file,
             session.result_path,
+            on_success=lambda _: self._on_action_done("postprocess.print_ok"),
+            on_error=self._on_action_failed,
+        )
+
+    @Slot(str)
+    def printGalleryImage(self, image_url: str) -> None:
+        """Re-print a photo from the Gallery, independent of any live
+        session (there usually isn't one -- the gallery is only reachable
+        from the idle screen)."""
+        if self._postprocess_busy:
+            return
+        path = Path(QUrl(image_url).toLocalFile())
+        if not path.is_file():
+            return
+        self._set_busy(True)
+        run_in_background(
+            self._printer.print_file,
+            path,
             on_success=lambda _: self._on_action_done("postprocess.print_ok"),
             on_error=self._on_action_failed,
         )
@@ -805,6 +832,10 @@ class AppController(QObject):
     @Property(list, notify=slideshowChanged)
     def slideshowImages(self) -> list[str]:
         return self._slideshow
+
+    @Property(list, notify=galleryChanged)
+    def galleryImages(self) -> list[str]:
+        return self._gallery
 
     @Property(bool, notify=postprocessBusyChanged)
     def postprocessBusy(self) -> bool:

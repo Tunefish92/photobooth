@@ -38,16 +38,31 @@ Item {
         onClicked: pinPopup.visible = true
     }
 
+    // Gallery: browse every past photo -- below the settings gear, same
+    // corner, same icon-button styling.
+    IconButton {
+        id: galleryButton
+        objectName: "galleryButton"
+        anchors.top: settingsGearButton.bottom
+        anchors.topMargin: Theme.spaceSm
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.spaceLg
+        vectorGallery: true
+        onClicked: galleryOverlay.visible = true
+    }
+
     // Small, unobtrusive indicator that a newer release is available --
     // AppController checks shortly after startup and whenever the Settings
     // screen's Update tab is used; this just reflects App.updateAvailable.
+    // Sits beside the gear (not below it) so it never competes for space
+    // with the gallery button stacked underneath.
     Rectangle {
         id: updateBadge
         objectName: "updateAvailableBadge"
         visible: App.updateAvailable
-        anchors.top: settingsGearButton.bottom
-        anchors.topMargin: Theme.spaceXs
-        anchors.horizontalCenter: settingsGearButton.horizontalCenter
+        anchors.right: settingsGearButton.left
+        anchors.rightMargin: Theme.spaceXs
+        anchors.verticalCenter: settingsGearButton.verticalCenter
         radius: height / 2
         height: badgeLabel.implicitHeight + Theme.spaceXs
         width: badgeLabel.implicitWidth + Theme.spaceSm
@@ -148,24 +163,24 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
-        Column {
-            spacing: Theme.spaceMd
+        PrimaryButton {
+            objectName: "modeConfirmStartButton"
             anchors.horizontalCenter: parent.horizontalCenter
-
-            PrimaryButton {
-                objectName: "modeConfirmStartButton"
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Translator.tr("common.start")
-                onClicked: App.start(App.selectedMode, App.defaultFilter)
-            }
-            PrimaryButton {
-                objectName: "modeConfirmBackButton"
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Translator.tr("common.back")
-                outlined: true
-                onClicked: App.cancelModeSelection()
-            }
+            text: Translator.tr("common.start")
+            onClicked: App.start(App.selectedMode, App.defaultFilter)
         }
+    }
+
+    // Back button for the mode-confirm screen -- bottom-left corner,
+    // icon-only, mirroring the exit button's bottom-right placement.
+    IconButton {
+        objectName: "modeConfirmBackButton"
+        visible: App.selectedMode !== ""
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.margins: Theme.spaceLg
+        vectorBack: true
+        onClicked: App.cancelModeSelection()
     }
 
     // -- settings PIN gate --------------------------------------------------
@@ -272,5 +287,11 @@ Item {
         }
     }
 
-    onVisibleChanged: if (!visible) { pinPopup.visible = false; exitConfirm.visible = false }
+    // -- gallery ------------------------------------------------------------
+    GalleryOverlay {
+        id: galleryOverlay
+        visible: false
+    }
+
+    onVisibleChanged: if (!visible) { pinPopup.visible = false; exitConfirm.visible = false; galleryOverlay.visible = false }
 }

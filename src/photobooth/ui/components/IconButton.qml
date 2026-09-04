@@ -14,6 +14,8 @@ Button {
     property bool vectorGear: false
     property bool vectorPower: false
     property bool vectorClose: false
+    property bool vectorBack: false
+    property bool vectorGallery: false
     implicitWidth: 60
     implicitHeight: 60
 
@@ -44,8 +46,22 @@ Button {
             height: 26
             color: Theme.textPrimary
         }
+        BackIcon {
+            visible: root.vectorBack
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            color: Theme.textPrimary
+        }
+        GalleryIcon {
+            visible: root.vectorGallery
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            color: Theme.textPrimary
+        }
         Text {
-            visible: !root.vectorGear && !root.vectorPower && !root.vectorClose
+            visible: !root.vectorGear && !root.vectorPower && !root.vectorClose && !root.vectorBack && !root.vectorGallery
             text: root.glyph
             color: Theme.textPrimary
             font.pixelSize: 26
