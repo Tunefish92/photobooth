@@ -25,6 +25,16 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 </details>
 
 <details>
+<summary><b>Gallery</b> (browse and reprint any past photo)</summary>
+<br>
+
+| | |
+|---|---|
+| **Grid** ![Gallery grid](docs/screenshots/gallery_grid.png) | **Detail** ![Gallery detail](docs/screenshots/gallery_detail.png) |
+
+</details>
+
+<details>
 <summary><b>Themes</b> (Settings -> General -> Theme; the screenshot above is Aurora Dark, the default)</summary>
 <br>
 
@@ -82,6 +92,9 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
   min or 1h)
 - English/German UI, fully translated
 - Idle-screen slideshow of recent shots, SQLite-indexed
+- Gallery (button below Settings on the idle screen): browse every photo
+  ever taken in a scrollable grid, open any one full-size, and reprint it
+  on demand -- independent of any live capture session
 
 ## Requirements
 

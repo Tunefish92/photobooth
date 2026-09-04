@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-09-04
+
+### Gallery
+
+- New Gallery: a button below the Settings gear on the idle screen (shown
+  for every mode) opens a full scrollable grid of every photo ever taken.
+  Tapping one opens it full-size with prev/next navigation and a Print
+  button that reprints it directly, independent of any live capture
+  session.
+
+### UI
+
+- Mode-confirm screen: moved the Back button out of the centered button
+  column into a standalone icon-only button in the bottom-left corner,
+  matching the Gallery/Settings screens' navigation convention.
+- Postprocess screen: renamed the finishing button from "Done"/"Fertig"
+  to "Again"/"Nochmal", since it returns to that mode's confirmation
+  screen for another round rather than actually exiting.
+
 ## [1.2.3] - 2026-08-24
 
 ### Fixed

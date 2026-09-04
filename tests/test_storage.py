@@ -75,6 +75,55 @@ def test_photo_kind_constraint_rejects_invalid_kind(tmp_path: Path):
     db.close()
 
 
+def test_all_results_returns_every_result_newest_first(tmp_path: Path):
+    """Backs the Gallery screen -- unlike recent_results, this must return
+    everything on record, not just a capped window for the idle slideshow."""
+    db = PhotoDatabase(tmp_path / "photobooth.sqlite3")
+    session = make_session()
+    db.record_session(session)
+
+    paths = []
+    for i in range(40):  # comfortably past recent_results' default cap of 30
+        p = tmp_path / f"result_{i}.jpg"
+        p.write_bytes(b"x")
+        db.record_photo(session.id, p, "result")
+        paths.append(p)
+
+    results = db.all_results()
+    assert len(results) == 40
+    assert results[0] == paths[-1]  # newest first
+    assert results[-1] == paths[0]
+    db.close()
+
+
+def test_all_results_filters_out_deleted_files(tmp_path: Path):
+    db = PhotoDatabase(tmp_path / "photobooth.sqlite3")
+    session = make_session()
+    missing_path = tmp_path / "gone.jpg"
+
+    db.record_session(session)
+    db.record_photo(session.id, missing_path, "result")
+
+    assert db.all_results() == []
+    db.close()
+
+
+def test_all_results_excludes_individual_shots(tmp_path: Path):
+    db = PhotoDatabase(tmp_path / "photobooth.sqlite3")
+    session = make_session()
+    shot_path = tmp_path / "shot.jpg"
+    shot_path.write_bytes(b"x")
+    result_path = tmp_path / "result.jpg"
+    result_path.write_bytes(b"x")
+
+    db.record_session(session)
+    db.record_photo(session.id, shot_path, "shot")
+    db.record_photo(session.id, result_path, "result")
+
+    assert db.all_results() == [result_path]
+    db.close()
+
+
 def test_database_survives_close_and_reopen(tmp_path: Path):
     db_path = tmp_path / "photobooth.sqlite3"
     db = PhotoDatabase(db_path)
